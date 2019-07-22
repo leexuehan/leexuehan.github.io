@@ -254,7 +254,61 @@
 <p>这就涉及到了<strong>更新逻辑</strong>，因为事务B中有一条update语句。</p>
 <p>事务的更新永远是建立在最新的版本上的。比如事务B的更新，不管事务C的更新是否提交。事务B此时的 set k=k+1 更新，是在 （1,2）的基础上进行的。</p>
 <p>更新数据的准则：<strong>先读后写，读只读当前值</strong>。</p>
-<p>（未完，待续。。。）</p>
+<p>稍微改下事务的执行流程如下：</p>
+<table>
+<thead>
+<tr>
+<th>事务A</th>
+<th>事务B</th>
+<th>事务C</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>start transaction with consistent snapshot；</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>start transaction with consistent snapshot；</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>start transaction with consistent snapshot；<br>update set  k=k+1 where id=1;</td>
+</tr>
+<tr>
+<td></td>
+<td>update set  k=k+1 where id=1;<br>select k from t where id = 1;</td>
+<td></td>
+</tr>
+<tr>
+<td>select k from t where id = 1;<br>commit;</td>
+<td></td>
+<td>commit;</td>
+</tr>
+<tr>
+<td></td>
+<td>commit;</td>
+</tr>
+</tbody>
+</table>
+<p>事务C相较上次发生了变化：显式启动事务，且在事务B的更新语句执行之后提交。</p>
+<p>继续一步一步分析：</p>
+<p>事务A,B,C依次启动；</p>
+<p>对于id=1的那行数据，事务C正在更新k的值为2，<strong>更新尚未提交</strong>；</p>
+<p>事务B的update语句也尝试将k的值加1，此时会发生什么？</p>
+<p>更新为3？</p>
+<p>非也。此时涉及到了前文讲的<a href="[https://leexuehan.github.io/2019/07/21/MySQL%E7%9A%84%E9%94%81/](https://leexuehan.github.io/2019/07/21/MySQL的锁/">MySQL行锁的概念</a>)。事务C在未提交之前，会将 id=1 的行数据上写锁，而事务B对该行也要进行更改操作，故也是写锁，写锁之间是互斥的，所以此时事务B<strong>会阻塞等待，直到事务C释放</strong>。如果事务B只有 select 语句，则此时根据前面的分析：k 的值依然是1.</p>
+<p><div align="center"><img src="./transactionB.png" alt="事务B的查询逻辑图"></div></p>
+<p>总结一下，在RR事务隔离级别下，只需要在事务一开始的时候创建一个一致性视图，之后事务的其他查询都共用这个一致性视图。</p>
+<h3 id="RC-隔离级别的实现"><a href="#RC-隔离级别的实现" class="headerlink" title="RC 隔离级别的实现"></a>RC 隔离级别的实现</h3><p>RC情况相较RR更为简单：RC是每个语句执行前都会重新算出一个新的视图。</p>
+<p>再以上面为例。</p>
+<p><div align="center"><img src="./RC.jpg" alt="读提交隔离"></div></p>
+<p>所以事务A在查询k值的时候创建了一张视图，这个视图创建之前其他事务已经提交的修改均为可见，于是事务A看到的k值为2。</p>
+<p>（全文完）</p>
 <h3 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h3><ol>
 <li>丁奇《MySQL 45讲》</li>
 <li><a href="https://www.cnblogs.com/wy123/p/8365234.html" target="_blank" rel="noopener">https://www.cnblogs.com/wy123/p/8365234.html</a></li>
