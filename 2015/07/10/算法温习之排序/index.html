@@ -1,0 +1,463 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.8.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> 算法温习之排序 · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="算法温习之排序 - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">算法温习之排序</h1><div class="post-info">2015-07-10<p class="visit"><i data-identity="2015/07/10/算法温习之排序/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><p>前面想说的话，可以算作是前言吧。</p>
+<p>最近想把之前看过的几种常用的排序再复习一下。我看的算法书是《数据结构与算法分析（Java语言描述）》，Mark Allen Weiss著，翻译的也挺到位。着重看了排序那一部分，又有了许多新的感悟。突然一下子对于排序有了一点感觉,似乎找到了一点学习算法的门道，总而言之，就是看算法或者算法题，不要过分依赖代码。有一种做法：一拿到算法题，尤其是有答案的，想不明白就着急着看别人的代码实现。看懂了，明白了，就以为理解了，等到之后在遇到相同的算法难题，又不知从何下手了。</p>
+<p>以我的看法，大错特错。</p>
+<p><strong>千万不要先看代码，千万不要先看代码，千万不要先看代码</strong>！</p>
+<p>最近很流行这个，重要的事情说三遍。</p>
+<p>一定要先自己想，然后，如果实在想不明白，再看人家的实现，在看实现的过程不要先纠缠细节，要先明白他的思路，思路是最重要的，就跟解应用题，等量关系最重要，等你对怎么列等量关系有了一点心得，那么接下来的列方程解方程自然也是水到渠成的事情。解决算法题也一样，只有你把别人解决问题的思路彻底理解了，或者你自己想出一个特别清晰的思路来，之后的代码部分只是一个规范问题和细节问题了。有很多人，在遇到算法题之后，先着急在纸上写个函数，然后就愣在那里了，这就是没有想清楚的缘故。</p>
+<p>明白思路之后，接着不要看他的代码，自己试着实现之，在实现的过程中，你又会碰到很多问题，这就牵扯到很多细节了，实际上，如果你一上来就抱着代码啃，你很难注意那些细节，因为你没有碰到过作者当时写代码的时候的难处，自然就理解为想当然了。当你真正写过之后，才明白，原来作者与我也一样遇到过这个难题，才能领悟作者处理细节的思路。</p>
+<p>如果一切进展顺利，完美实现，则将你的代码与他的代码进行对比。这个时候，也许你能看出自己的代码与别人的差距在哪里，该从哪些方面改进。</p>
+<p>说了那么多，一言以蔽之：思路，细节，对比。</p>
+<p>以上就是最近在看算法的过程中的一点领悟。高手可以一笑置之曰：菜鸟终于开窍了；如果你跟我以前一样迷茫对于算法又恨又爱，看了就忘，忘了再看，不妨试试我的方法，也许会给你带来一点帮助。</p>
+<p>在文章后面的部分将依次介绍：插入排序，希尔排序，堆排序，快速排序，归并排序。会从思路、代码实现（细节）、算法优劣、使用场景这五个部分来进行阐述。有错误的地方，请高手指正。</p>
+<hr>
+<h3 id="插入排序"><a href="#插入排序" class="headerlink" title="插入排序"></a>插入排序</h3><p>思路：</p>
+<p>要保证在遍历第N趟后，前N个数字是排好序的（只有这样才方便插入，比喻：就像在玩扑克牌一样，在摸回第N张牌时，要保证前N-1张牌是排好序的），盗用网上的一张图。<br><img src="https://cloud.githubusercontent.com/assets/12984324/8621584/008a6314-2759-11e5-8f23-e32bac96259f.PNG" alt="7-10-1"><br>代码实现：</p>
+<pre><code>package com.study;
+
+/*
+ * 插入排序
+ * 思路：要保证第n趟之后，前n个数字是排好序的
+ * 算法复杂度： O(n^2)； 平均复杂度：O(n^2)
+ * */
+public class InsertionSort {
+    private static int[] arr = { 34, 8, 64, 51, 32, 21, 2 }; //测试用例
+    public static void sort(int[] arr) {
+        for (int i = 1; i &lt; arr.length; i++) {
+            int temp = arr[i]; // 先把该数拿出来
+            int j;
+            //System.out.println(&quot;Loop : &quot; + i);
+            for (j = i; j &gt; 0 &amp;&amp; temp &lt; arr[j - 1]; j--) {// 依次遍历，如果小于拿出来的那个数则顺次往前移
+                //System.out.println(&quot;j value: &quot; + j);
+                arr[j] = arr[j - 1];
+            }
+            arr[j] = temp; // 再把拿出来的数填补上去
+        }
+    }
+    public static void main(String[] args) {
+        sort(arr);
+        for (int i = 0; i &lt; arr.length; i++) {
+            System.out.println(arr[i]);
+        }
+    }
+}
+</code></pre><p>分析：</p>
+<p>1.先把要排序的数字拿出来；然后找到第一个比它小的数；再把空位补上。</p>
+<p>2.在数组已经大致排好序的时候，使用插入排序时最快的。</p>
+<p>3.平均复杂度： O(n^2)</p>
+<h2 id="希尔排序"><a href="#希尔排序" class="headerlink" title="希尔排序"></a>希尔排序</h2><p>思路：</p>
+<p>比较相距一定间隔的元素来工作，各趟比较所用的距离随着算法的进行而减小，直到最后一趟，只比较相邻的元素来完成最后的排序。</p>
+<p>希尔排序使用一个增量序列 h1,h2,….ht来排序，每次排序都保证所有相隔hk的元素能被排序。<strong>每次将相隔一定距离的元素的排序方法与插入排序类似。</strong></p>
+<p>增量序列的一个流行的选择是：ht=N/2(取下界，后类同),hk=h(k+1)/2;</p>
+<p>示意图：</p>
+<p><img src="https://cloud.githubusercontent.com/assets/12984324/8632216/5221841c-27c4-11e5-8450-2e5aa1326849.PNG" alt="7-10-3"></p>
+<p>分析：</p>
+<p>希尔排序的平均复杂度： O(n^(1+x)) x的范围是[0,1];这跟选取的增量序列和待排序序列的情况有关系。<br>从上面可以知道最好时间复杂度：O(n),最坏情形复杂度：O(n^2).</p>
+<p>这本书上给了一个很有意思的特例来证明希尔排序的最坏时间复杂度，如下图</p>
+<p>start    1 9 2 10 3  11 4 12 5 13 6  14 7  15 8  16<br>8        1 9 2 10 3  11 4 12 5 13 6  14 7  15 8  16<br>4        1 9 2 10 3  11 4 12 5 13 6  14 7  15 8  16<br>2        1 9 2 10 3  11 4 12 5 13 6  14 7  15 8  16<br>1        1 2 3 4  5  6  7 8  9 10 11 12 13 14 15 16</p>
+<p>从图中可以看出由于所排序的序列比较特殊，导致前三次排序并没有起到任何的作用，只有最后一次才完成了排序，相当于进行了一次插入排序。导致最后的时间复杂度为O(n^2)。</p>
+<h2 id="堆排序"><a href="#堆排序" class="headerlink" title="堆排序"></a>堆排序</h2><p>思路：个人觉得这是最麻烦的一个排序了，先要建立大顶堆或者小顶堆，然后在从顶上取出元素输出，同时把最后一个元素放到对顶，进行大顶堆或者小顶堆调整（上升或者下沉），形成新的大顶堆，输出堆顶元素，以此类推，直到全部输出为止。</p>
+<p><strong>算法的核心就是：建堆。</strong></p>
+<p>怎样建堆呢？</p>
+<p>先用待排序的数组按层建立一个普通的完全二叉树（第一层放1个数，第二层2个，第三层4个。。。。其实也不用真的建立，只是在心里记住这个模型，然后用这个二叉树模型来调整数组），因为完全二叉树有这样一个特征：</p>
+<blockquote>
+<p>如果数组下标从 0 开始，用 a 表示这个数组，则 a[i] 的左孩子就是 a[2<em>i+1] ,右孩子就是 a[2</em>i+2].而最后一个有孩子的节点是在节点 a[length/2(向下取整)] 地方，<strong>该节点有可能有两个孩子，也有可能有一个孩子</strong>。这点需要注意。</p>
+</blockquote>
+<p>怎么判断最后上面提到的节点有几个孩子呢？</p>
+<p>只要总结一下简单的规律即可：如果该节点有一个孩子，则 [length/2(向下取整)]*2 == length，反之则不等。</p>
+<p>上代码：</p>
+<pre><code>package com.study;
+
+/*
+ * 堆排序
+ * 时间复杂度: O(NlogN)
+ * 空间复杂度：O(N),因为需要一个辅助数组
+ * */
+public class HeapSort {
+    private static int[] arr = { 0, 81, 94, 11, 96, 12, 35, 17, 95, 28, 58, 41,
+            23, 100 };
+
+    /* 这个数组的第一个元素是0，没有意义，只是为了排序更为方便，能让下标从1开始排序 */
+    public static void Sort(int[] arr, int[] result) {
+        int j = arr.length - 1;
+        int len = j;
+        for (int i = 0; i &lt; arr.length - 1; i++, j--) {
+            BuildMaxHeap(arr, len--);
+            result[i] = arr[1];
+            arr[1] = arr[j];
+        }
+    }
+
+    public static void BuildMaxHeap(int[] arr, int len) { // 构建大顶堆
+        for (int i = len / 2; i &gt; 0; i--)
+            // 从最后一个有孩子的节点开始下沉
+            percolateDown(i, arr, len);
+    }
+
+    public static void percolateDown(int hole, int[] arr, int len) {
+        int tmp = arr[hole]; // 先把该节点拿出来
+        int child;
+        for (; hole * 2 &lt;= len; hole = child) { // 要限制hole的范围，防止溢出
+            child = 2 * hole; // 孩子节点
+            /* 在最后一个节点同时有两个孩子的时候，断左右孩子的大小 */
+            if (child != arr.length - 1 &amp;&amp; arr[child] &lt; arr[child + 1])
+                child++;
+            if (tmp &lt; arr[child])
+                arr[hole] = arr[child];
+            else
+                break;
+        }
+        arr[hole] = tmp;
+    }
+
+    public static void main(String[] args) {
+        int[] result = new int[arr.length - 1];
+        Sort(arr, result);
+        for (int i = 0; i &lt; result.length; i++) {
+            System.out.print(result[i] + &quot; &quot;);
+        }
+    }
+}
+</code></pre><p>分析：</p>
+<p>1.堆排序建堆的过程花费 O(N) 时间，每次取出最小的元素或者最大的元素花费时间 O(logN),因此总的运行时间为O(NlogN).</p>
+<p>2.如果需要一个辅助数组的话，空间复杂度为O(N),但是也可以想办法避免之，比如每次都把堆的大小减少 1， 剩下来的存储刚从堆顶取出来的元素。</p>
+<p>3.堆排序对原始数据不敏感，因此最好，最坏，平均时间复杂度都为O(nlogn);</p>
+<pre><code>推导过程：
+建堆过程需要的时间复杂度为： O(n);
+取数，加调整的过程的时间复杂度为O(nlogn)
+&lt;因为每次取点，加上要下沉，时间复杂度为logn,但是要取N次，故为O(NlogN)&gt;
+</code></pre><p>但是，它需要一个辅助数组来存储排序的结果，故空间复杂度为O(n);</p>
+<p>4.此排序的代码难点在于：下沉或者是上升，调整为大顶堆或者小顶堆的过程。<strong>另外还要注意最后一个节点是否有两个孩子还是只有一个孩子。</strong>，下沉的函数应该是从最后一个有孩子的节点开始调整（就因为方向走反，所以饶了好长时间没走出来）</p>
+<p>引用知乎上的一个答案：</p>
+<blockquote>
+<p>平均时间上，堆排序的时间常数比快排要大一些，因此通常会慢一些，但是堆排序最差时间也是O(nlogn)的，这点比快排好。<br>关于 poor use of cache memory，我的理解是快排在递归进行部分的排序的时候，只会访问局部的数据，因此缓存能够更大概率的命中；而堆排序的建堆过程是整个数组各个位置都访问到的，后面则是所有未排序数据各个位置都可能访问到的，所以不利于缓存发挥作用。简答的说就是快排的存取模型的局部性(locality）更强，堆排序差一些。<br>我理解，速度和缓存的问题都反映了堆排序让数据过于大距离的移动，你观察某个元素在整个排序过程中的移动过程，会发现它是前后大幅度的跑动；而快速排序则是尽快的移动到最终的位置，然后做小范围的跳动。</p>
+</blockquote>
+<p>5.<strong>堆排序是不稳定的。</strong>具体原因，有个百度知道讲得很简洁：</p>
+<blockquote>
+<p>快速排序：<br>27 23 27 3<br>以第一个27作为pivot中心点，则27与后面那个3交换，形成<br>3 23 27 27，排序经过一次结束，但最后那个27在排序之初先于初始位置3那个27，所以不稳定。</p>
+</blockquote>
+<blockquote>
+<p>堆排序：<br>比如：3 27 36 27，<br>如果堆顶3先输出，则，第三层的27（最后一个27）跑到堆顶，然后堆稳定，继续输出堆顶，是刚才那个27，这样说明后面的27先于第二个位置的27输出，不稳定。</p>
+</blockquote>
+<h2 id="快速排序"><a href="#快速排序" class="headerlink" title="快速排序"></a>快速排序</h2><p>思路：快速排序的思路现在看来还是比较简单的，基于分治思想，大而化小，分而治之。核心在于每次找到枢纽元，然后将枢纽元放在合适的位置（如果将数组从小到大排序，则<strong>所谓合适的位置就是枢纽元的左边是小于枢纽元的的数字，右边是大于枢纽元的数字</strong>），之后以枢纽元为界限，递归排序枢纽元前后的两部分直到满足递归结束条件。</p>
+<p>如何将枢纽元放到合适的位置呢？</p>
+<p>第一步，选取枢纽元。</p>
+<p>选的方法有好多种：书中极力抨击“将第一个元素选作枢纽元这种做法”，因为如果输入是预排序或者是反序的，则枢纽元不再起到分割数组的作用，也就毫无意义；书中推荐的做法是：<strong>随机选取枢纽元</strong>，代码实例中的方法也是随机选取枢纽元。</p>
+<p>第二步，分割数组。</p>
+<p>将枢纽元与最后的元素交换使枢纽元离开要被分割的数据段。并初始化两个游标i，j。i从第一个元素开始，j从倒数第二个元素开始遍历（倒数第一个是枢纽元）。</p>
+<p>先考虑所有的元素都互异：</p>
+<p>记住我们的目标：将小于枢纽元的元素移到左边，将大于枢纽元的元素移到右边。</p>
+<blockquote>
+<p>开始的时候，将i右移，移过那些小于枢纽元的元素（符合预期，没有必要去动），直到碰到大于枢纽元的元素，停止。<br>然后将j左移，移过那些大于枢纽元的元素，直到碰到小于枢纽元的元素，停止。<br>如果下标 i 小于 下标 j，交换这两个元素；否则停止遍历。<br>最后将i再次右移，与最后的枢纽元交换。则枢纽元就放在合适的位置上了。返回下标即可。<br>至此，数组已经被完美分割，并以枢纽元为界。</p>
+</blockquote>
+<p>那么，如果碰到等于枢纽元的元素怎么办？</p>
+<p>一种方法是：i，j都不停止，设置一个条件防止i和j越过数组的端点即可。但试想这样一种极端的情况，如果所有的关键字都相同呢？则i会遍历到倒数第二个元素，然后算法复杂度会达到O(N^2).可能有人觉得对于一堆相等的数字排序没有任何意义，但是如果放在一个庞大的数组中，如果有一个大小为 1 000 000的数组，其中有50 000 个元素相同，则O(N^2)的复杂度也是不能忍的。</p>
+<p>另一种方法是：i,j都停止，也是作者推荐的做法，虽然会产生不必要的交换，但是不会有二次的复杂度的情况产生。而下面的代码中也是这样实现的。</p>
+<p>代码：</p>
+<pre><code>package com.study;
+import java.util.Random;
+/*快速排序
+ * 平均复杂度：O(NlogN)
+ * 最坏情况时间复杂度： O(NlogN)
+ * 空间复杂度： O(logN) ~  O(N)
+ * 最坏情况： O(N)
+ * 平均： O(logN)
+ * */
+public class QuickSort {
+    // private static int[] arr = { 81, 94, 11, 96, 12, 35, 17, 95, 28, 58, 41,
+    // 23 };  
+    //private static int[] arr = { 1, 2, 2, 3, 5, 5, 6, 4, 4, 8 };
+    // private static int[] arr = { 10, 15, 9, 5, 6, 8, 11 };
+    private static int[] arr = {1,2,1,1,1,1,2,1};
+
+    public static void Sort(int[] arr, int s_index, int t_index) {
+        if (s_index == t_index)
+            return;
+        if(s_index &lt; t_index) {
+            int mid = Partition(arr, s_index, t_index);
+            if (s_index &lt; mid)
+                Sort(arr, s_index, mid - 1);
+            if (t_index &gt; mid)
+                Sort(arr, mid + 1, t_index);
+        }
+    }
+
+    public static int Partition(int[] arr, int start, int end) {
+        int index = new Random().nextInt(end - start) + start; //
+        // 产生[start,end)区间的随机数
+        /*System.out.println(&quot;index is :&quot; + index + &quot;;  indexNumber is: &quot;
+                + arr[index]);*/
+        int pivot = arr[index];
+        swap(arr, index, end);
+        int i = start - 1;
+        int j = end;
+        for (;;) {
+            while (arr[++i] &lt; pivot &amp;&amp; i &lt; end)
+                ;
+            while (arr[--j] &gt; pivot &amp;&amp; j &gt; start)
+                ;
+            if (i &lt; j)
+                swap(arr, i, j);
+            else
+                break;
+        }
+        swap(arr, i, end);
+        for (int k = 0; k &lt; arr.length; k++) {
+            System.out.print(arr[k] + &quot; &quot;);
+        }
+        System.out.println();
+        return i;
+    }
+
+    public static void swap(int[] arr, int i, int j) {
+        int tmp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = tmp;
+    }
+
+    public static void main(String[] args) {
+        Sort(arr, 0, arr.length - 1);
+        System.out.println(&quot;after been sorted&quot;);
+        for (int i = 0; i &lt; arr.length; i++) {
+            System.out.print(arr[i] + &quot; &quot;);
+        }
+
+    }
+}
+</code></pre><p>分析：</p>
+<p>1.关于代码</p>
+<p>a.这个代码用了一个巧妙的for(;;)结构，将两个while循环放在了一个循环模块，用最省力的方式。</p>
+<p>b.在while循环里，用++i还是i++，这里涉及到的不只是一个习惯问题。作者很细心的指出来，如果像下面一样用i++的方式</p>
+<pre><code>for(;;) {
+    while(a[i] &lt; pivot) 
+        i++;
+    while(a[j] &gt; pivot)
+        j--;
+    if(i &lt; j)
+        swap(arr, i, j);
+    else
+        break;
+}
+</code></pre><p>这样的形式，如果a[i]=a[j]=pivot;则会陷入无限循环中去。赞一个！</p>
+<p>2.<strong>快速排序是一种不稳定排序</strong>。</p>
+<p>3.对于很小的数组，快速排序的性能不如插入排序。因为快排是基于递归的，需要出栈入栈，如果数据国语庞大的话，这样的时间不能不考虑。</p>
+<h2 id="归并排序"><a href="#归并排序" class="headerlink" title="归并排序"></a>归并排序</h2><p>思路：一句话，合并两个排序的表，然后将结果放到第三个表中。</p>
+<p>关于递归实现的归并排序示意图（《大话数据结构》）：<br><img src="https://cloud.githubusercontent.com/assets/12984324/8632220/6ad2d4de-27c4-11e5-9d53-e14aac244219.PNG" alt="7-10-5"></p>
+<p>这里还有一个更清楚的归并排序动态图：</p>
+<p><img src="https://cloud.githubusercontent.com/assets/12984324/8632221/760f5476-27c4-11e5-8ec5-80f841195d20.gif" alt="merge-sort-example-300px"></p>
+<p>代码：</p>
+<pre><code>package com.study;
+
+/*归并排序
+ * 基本思路：合并两个已经排序的表
+ * */
+public class MergeSort {
+    private static int[] arr = { 24, 13, 26, 1, 2, 27, 38, 15 };
+
+    public static void sort(int[] arr, int[] temp, int start, int end) {
+        System.out.println(&quot;Start is :&quot; + start + &quot;, End is:&quot; + end);
+        if (start == end)
+            return;
+        int mid = (start + end) / 2;
+        sort(arr, temp, start, mid);
+        sort(arr, temp, mid + 1, end);
+
+        /* 合并排序表 */
+        merge(arr, temp, start, mid, end);
+    }
+
+    public static void merge(int[] arr, int[] temp, int start, int mid, int end) {
+        if (start &gt;= end)
+            return;
+
+        int i = start;
+        int j = mid + 1;
+        int k = start;
+
+        while (i &lt;= mid &amp;&amp; j &lt;= end) {
+            if (arr[i] &lt; arr[j]) {
+                temp[k++] = arr[i++];
+            } else {
+                temp[k++] = arr[j++];
+            }
+        }
+
+        /* 将剩下的按顺序拷贝进去临时数组 */
+        if (i &gt; mid) {
+            while (j &lt;= end)
+                temp[k++] = arr[j++];
+        }
+
+        if (j &gt; end) {
+            while (i &lt;= mid)
+                temp[k++] = arr[i++];
+        }
+
+        /* 再将临时数组中排好序的数据拷贝到原始数组中 */
+
+        for (i = 0, k = 0; i &lt;= end; i++, k++) {
+            System.out.print(&quot;temp[i] is : &quot; + temp[i] + &quot; &quot;);
+            arr[k] = temp[i];
+        }
+        System.out.println();
+    }
+
+    public static void main(String[] args) {
+        int[] temp = new int[arr.length];
+        sort(arr, temp, 0, arr.length - 1);
+        System.out.println(&quot;after been sorted&quot;);
+
+        for (int i = 0; i &lt; arr.length; i++) {
+            System.out.print(arr[i] + &quot; &quot;);
+        }
+    }
+
+}
+</code></pre><p>分析：</p>
+<p>1.归并排序进行的比较都是相邻的数据比较，故是<strong>一种稳定的排序算法</strong>。</p>
+<p>2.最坏算法复杂度为：O(NlogN)。</p>
+<p>3.书的作者也指出，在合并两个已经排序的表时，还是需要O(n)的附加内存，还要花费将数据拷贝到临时数组再拷贝回去的附加操作。所以它与快速排序一样都是比较占用内存的。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>在网上看到这样一段话说得特别逗，也特别形象：</p>
+<blockquote>
+<p>从算法的简单性来看，我们将7种算法分为两类：<br>简单算法：冒泡、简单选择、直接插入。<br>改进算法：希尔、堆、归并、快速。<br>归并从平均情况来看，显然最后3种改进算法要胜过希尔排序，并远远胜过前3种简单算法。<br>从最好情况看，反而冒泡和直接插入排序要更胜一筹，也就是说，如果你的待排序序列总是基本有序，反而不应该考虑4种复杂的改进算法。<br>从最坏情况看，堆排序与归并排序又强过快速排序以及其他简单排序。</p>
+<p>从这三组时间复杂度的数据对比中，我们可以得出这样一个认识。堆排序和归并排序就像两个参加奥数考试的优等生，心理素质强，发挥稳定。而快速排序像是很情绪化的天才，心情好时表现极佳，碰到较糟糕环境会变得差强人意。但是他们如果都来比赛计算个位数的加减法，它们反而算不过成绩极普通的冒泡和直接插入。</p>
+<p>从空间复杂度来说，归并排序强调要马跑得快，就得给马吃个饱。快速排序也有相应的空间要求，反而堆排序等却都是少量索取，大量付出，对空间要求是O(1)。<strong>如果执行算法的软件所处的环境非常在乎内存使用量的多少时，选择归并排序和快速排序就不是一个较好的决策了。</strong></p>
+<p>从稳定性来看，归并排序独占鳌头，我们前面也说过，<strong>对于非常在乎排序稳定性的应用中，归并排序是个好算法</strong>。</p>
+<p>从待排序记录的个数上来说，<strong>待排序的个数n越小，采用简单排序方法越合适。反之，n越大，采用改进排序方法越合适。</strong>这也就是我们为什么对快速排序优化时，增加了一个阀值，低于阀值时换作直接插入排序的原因。</p>
+</blockquote>
+<h2 id="写在后面"><a href="#写在后面" class="headerlink" title="写在后面"></a>写在后面</h2><p>花了三天时间将排序算法整理了一下，由于时间所限，没有将冒泡排序、选择排序加进来，待后面有时间会慢慢完善。</p>
+<p>虽然这次整理排序比较用心，但是离彻底掌握这几种排序还有一段距离，需要后面不断的强化。</p>
+<p>以上写的都是内排序(将数据全部装载入内存，进行排序)，但在实际的运用中显然是不够的，因为实际遇到的数据往往比较大，无法一次装入内存，只能分块装入排序，将每块排好序输出，最后将这几个排好序的文件合并（实际上，最常用的也就是归并排序），这种排序方法叫外排序。此是后话，暂且不表。</p>
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2015/07/11/一点反思/" title="一点反思" class="prev">PREV</a><a href="/2015/07/10/关于web请求的理解/" title="关于web请求的理解" class="next">NEXT</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

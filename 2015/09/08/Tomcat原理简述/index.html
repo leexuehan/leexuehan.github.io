@@ -1,0 +1,199 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.8.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> Tomcat原理简述 · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Tomcat原理简述 - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">Tomcat原理简述</h1><div class="post-info">2015-09-08<p class="visit"><i data-identity="2015/09/08/Tomcat原理简述/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><p>本篇先介绍一下 Tomcat 的架构，然后就是处理Http请求的原理以及过程实现。</p>
+<h2 id="架构"><a href="#架构" class="headerlink" title="架构"></a>架构</h2><p><img src="http://i.imgur.com/O6ODYK4.png" alt></p>
+<p>从结构上来划分,就是四个重要模块：</p>
+<p>1.Server</p>
+<p>Server 是Tomcat构成的顶级元素。所有一切都包含在 Server 中，Server 的实现类 StandardServer 可以包含多个Service。</p>
+<p>2.Service </p>
+<p>次顶级元素 Service 的实现类 StandardService 调用了Container接口，实际上是调用了 Servlet Engine。</p>
+<p>3.Container</p>
+<p>接下来的构成元素就是 Container。</p>
+<blockquote>
+<p>主机(Host)、上下文(Context)和引擎(Engine)均继承自Container接口，所以它们都是容器。</p>
+</blockquote>
+<p><img src="http://i.imgur.com/15d6wij.png" alt></p>
+<p>上图就是一张典型的容器模型。</p>
+<p>但是，它们是有父子关系的，在主机(Host)、上下文(Context)和引擎(Engine)这三类容器中，引擎是顶级容器，直接包含是主机容器，而主机容器又包含上下文容器，所以引擎(Engine)、主机(Host)和上下文(Context)从大小上来说又构成父子关系，虽然它们都继承自Container接口。</p>
+<p>4.Connector</p>
+<p>连接器(Connector)将Service和Container连接起来，首先它需要注册到一个Service，它的作用就是把来自客户端的请求转发到Container(容器)，这就是它为什么称作连接器的原因。</p>
+<p>那么从功能上来划分呢？</p>
+<p>从功能上划分可以分为5个模块：</p>
+<p>1.Jsper</p>
+<p>这个子模块负责jsp页面的解析、jsp属性的验证，同时也负责将jsp页面动态转换为java代码并编译成class文件。</p>
+<p>2.Servlet和Jsp规范的实现模块</p>
+<p>这个子模块的源代码属于javax.servlet包及其子包，如我们非常熟悉的javax.servlet.Servlet接口、javax.servet.http.HttpServlet类及javax.servlet.jsp.HttpJspPage就位于这个子模块中。</p>
+<p>3.<strong>Catalina子模块</strong>（重要）</p>
+<p>这个子模块包含了所有以org.apache.catalina开头的java源代码。</p>
+<p>该子模块的任务是规范了Tomcat的总体架构，定义了Server、Service、Host、Connector、Context、Session及Cluster等关键组件及这些组件的实现，</p>
+<p>这个子模块大量运用了Composite设计模式。同时也规范了Catalina的启动及停止等事件的执行流程。从代码阅读的角度看，这个子模块应该是我们阅读和学习的重点。</p>
+<p>4.Connectors子模块</p>
+<p>如果说上面三个子模块实现了Tomcat应用服务器的话，那么这个子模块就是Web服务器的实现。</p>
+<p>所谓连接器(Connector)就是一个连接客户和应用服务器的桥梁，它接收用户的请求，并把用户请求包装成标准的Http请求(包含协议名称，请求头Head，请求方法是Get还是Post等等)。同时，这个子模块还按照标准的Http协议，负责给客户端发送响应页面，比如在请求页面未发现时，connector就会给客户端浏览器发送标准的Http 404错误响应页面。</p>
+<p>5.Resource子模块</p>
+<p>这个子模块包含一些资源文件，如Server.xml及Web.xml配置文件。严格说来，这个子模块不包含java源代码，但是它还是Tomcat编译运行所必需的。</p>
+<h2 id="处理-Http-请求"><a href="#处理-Http-请求" class="headerlink" title="处理 Http 请求"></a>处理 Http 请求</h2><h3 id="再谈connector"><a href="#再谈connector" class="headerlink" title="再谈connector"></a>再谈connector</h3><p>前面说了，Connectors就是一个连接器，把用户的请求包装成一个标准的 Http 请求发送到服务器。</p>
+<p><strong>种类：</strong></p>
+<p>1.Http Connector</p>
+<p>基于HTTP协议，负责建立HTTP连接。它又分为BIO Http Connector与NIO Http Connector两种，后者提供非阻塞IO与长连接Comet支持。</p>
+<p>2.AJP Connector</p>
+<p>基于AJP协议，AJP是专门设计用来为tomcat与http服务器之间通信专门定制的协议，能提供较高的通信速度和效率。如与Apache服务器集成时，采用这个协议。</p>
+<p>3.APR HTTP Connector</p>
+<p>用C实现，通过JNI调用的。主要提升对静态资源（如HTML、图片、CSS、JS等）的访问性能。现在这个库已独立出来可用在任何项目中。Tomcat在配置APR之后性能非常强劲。</p>
+<p><strong>配置：</strong></p>
+<pre><code>&lt;Connector port=”8080” protocol=”HTTP/1.1” maxThreads=”150” 
+    connectionTimeout=”20000” redirectPort=”8443”/&gt;
+</code></pre><p>其他一些重要属性：</p>
+<pre><code>acceptCount : 接受连接request的最大连接数目，默认值是10
+address : 绑定IP地址，如果不绑定，默认将绑定任何IP地址
+allowTrace : 如果是true,将允许TRACE HTTP方法
+compressibleMimeTypes : 各个mimeType, 以逗号分隔，如text/html,text/xml
+compression : 如果带宽有限的话，可以用GZIP压缩
+connectionTimeout : 超时时间，默认为60000ms (60s)
+maxKeepAliveRequest : 默认值是100
+maxThreads : 处理请求的Connector的线程数目，默认值为200
+</code></pre><p>可以看到，这些属性都是与连接有关系的。</p>
+<h3 id="收到-Http-请求的运行流程"><a href="#收到-Http-请求的运行流程" class="headerlink" title="收到 Http 请求的运行流程"></a>收到 Http 请求的运行流程</h3><p>1.请求被发送到本机端口8080，被在那里侦听的Coyote HTTP/1.1 Connector获得</p>
+<p>2.Connector把该请求交给它所在的Service的Engine来处理，并等待Engine的回应</p>
+<p>3.Engine获得请求localhost:8080/test/index.jsp，匹配它所有虚拟主机Host<br>Engine匹配到名为localhost的Host（即使匹配不到也把请求交给该Host处理，因为该Host被定义为该Engine的默认主机）</p>
+<p>4.localhost Host获得请求/test/index.jsp，匹配它所拥有的所有Context<br>Host匹配到路径为/test的Context（如果匹配不到就把该请求交给路径名为””的Context去处理）</p>
+<p>5.path=”/test”的Context获得请求/index.jsp，在它的mapping table中寻找对应的servlet</p>
+<p>6.Context匹配到URL PATTERN为*.jsp的servlet，对应于JspServlet类<br>构造HttpServletRequest对象和HttpServletResponse对象，作为参数调用JspServlet的doGet或doPost方法</p>
+<p>7.Context把执行完了之后的HttpServletResponse对象返回给Host</p>
+<p>8.Host把HttpServletResponse对象返回给Engine</p>
+<p>9.Engine把HttpServletResponse对象返回给Connector</p>
+<p>10.Connector把HttpServletResponse对象返回给客户browser</p>
+<p>画一个简单的图：</p>
+<p><img src="http://i.imgur.com/SLFhWXr.png" alt></p>
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2015/09/08/和为s的两个数字-vs-和为s的连续数列/" title="和为s的两个数字 vs 和为s的连续数列" class="prev">PREV</a><a href="/2015/09/08/设计模式之观察者模式/" title="设计模式之观察者模式" class="next">NEXT</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

@@ -1,0 +1,155 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.8.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> 安卓学习之系统架构 · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="安卓学习之系统架构 - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">安卓学习之系统架构</h1><div class="post-info">2016-06-19<p class="visit"><i data-identity="2016/06/19/安卓学习笔记01/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><p>快毕业那会儿就想搞下安卓，当时找工作没时间学新的东西，只好作罢。</p>
+<p>这段时间刚好想搞点新东西了，于是就想把安卓好好学下，毕竟闲时自己鼓捣出来个东西还是比较有成就感的。同时安卓涉及到的面比较广，从系统到语言到设计模式到前端，刚好可以以此为线，串珠为链扩充自己的知识面。</p>
+<a id="more"></a>
+<p>从今天开始，我将自己对于安卓的粗浅的理解写到博文里，权当做笔记，也是自己一个学习的印记。</p>
+<h2 id="安卓系统架构"><a href="#安卓系统架构" class="headerlink" title="安卓系统架构"></a>安卓系统架构</h2><p>说起安卓的系统架构离不开这张图：<br><img src="http://o8ahjnaal.bkt.clouddn.com/%E5%AE%89%E5%8D%93%E7%B3%BB%E7%BB%9F%E6%9E%B6%E6%9E%84%E5%9B%BE.jpg" alt></p>
+<p>可以看出来从底层到表层可以主要分为四层：</p>
+<p>1.Linux Kernel </p>
+<p>这是最底层，主要跟硬件打交道，所以里面包含了各种驱动。</p>
+<p>2.Library</p>
+<p>一些系统运行库：主要有数据库支持，一些3D动画效果库和浏览器内核支持，主要由C/C++语言编写。</p>
+<p>3.Application Framework</p>
+<p>构建应用程序所要的一些API。</p>
+<p>4.Application</p>
+<p>所有手机上的安装程序都在这一层，包括手机短信等应用程序。</p>
+<h2 id="安卓四大组件"><a href="#安卓四大组件" class="headerlink" title="安卓四大组件"></a>安卓四大组件</h2><p>安卓系统主要提供了四大组件，这四大组件的功能如下图所示：</p>
+<p><img src="http://o8ahjnaal.bkt.clouddn.com/Android%E5%9B%9B%E5%A4%A7%E7%BB%84%E4%BB%B6.jpg" alt></p>
+<h2 id="安卓项目的目录结构"><a href="#安卓项目的目录结构" class="headerlink" title="安卓项目的目录结构"></a>安卓项目的目录结构</h2><p>一个安卓项目的主要目录结构如下：</p>
+<p><img src="http://o8ahjnaal.bkt.clouddn.com/%E5%AE%89%E5%8D%93%E7%A8%8B%E5%BA%8F%E7%9B%AE%E5%BD%95%E7%BB%93%E6%9E%84.png" alt></p>
+<h2 id="安卓理念"><a href="#安卓理念" class="headerlink" title="安卓理念"></a>安卓理念</h2><p>逻辑与视图分离：即在业务逻辑里，从来不会设定要显示的页面的细节，这些都交给布局文件了，业务逻辑里面只要显示该布局文件即可。</p>
+<p>拒绝字符串硬编码：所以要有values目录，这里存放了所有需要显示字符串的键值对应关系。</p>
+<p>PS：极力推荐《第一行代码》这本书。讲得通俗易懂，看完这本书，再看官方API文档，相信一定会对安卓有个全面的了解的。</p>
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2016/07/01/入职四月感悟/" title="入职感悟" class="prev">PREV</a><a href="/2016/06/13/ftp协议学习/" title="ftp协议学习" class="next">NEXT</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

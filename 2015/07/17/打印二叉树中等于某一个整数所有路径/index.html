@@ -1,0 +1,231 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.8.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> 打印二叉树中等于某一个整数所有路径 · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="打印二叉树中等于某一个整数所有路径 - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">打印二叉树中等于某一个整数所有路径</h1><div class="post-info">2015-07-17<p class="visit"><i data-identity="2015/07/17/打印二叉树中等于某一个整数所有路径/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><h2 id="剑指offer面试题系列"><a href="#剑指offer面试题系列" class="headerlink" title="剑指offer面试题系列"></a>剑指offer面试题系列</h2><blockquote>
+<p>题目：输入一颗二叉树和一个整数，打印出二叉树中结点值的和为输入整数的所有路径。从树的根节点往下一直到叶节点所经过的节点形成一条路径。</p>
+</blockquote>
+<h3 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h3><p>思路：</p>
+<p>因为是寻找符合条件的路径，所以一路上遍历过的节点必须存储下来，这个存储结构我选择了LinkedList，因为它既可以当栈使用，也可以当队列使用，很方便。</p>
+<p>此题最关键的地方，我觉得应该是判断叶子节点那一部分和怎么出栈那一部分。</p>
+<p>遍历节点，如果是叶子节点，看sum，如果等于给定的数值，则打印该路径；否则将该节点出栈。如果遇到 sum 大于num的情况，则直接退出当前函数。</p>
+<p>此题的技巧是：每次遍历一个结点时，不管此节点满足条件与否，都将其入队，在函数退出时，随着函数一起退栈，这样做的目的是为了保持一致性：节点满足路径条件，则将其打印后，出栈该结点，再遍历下一个结点；如果不满足，也将其出栈，这样就不会造成<strong>找到路径和没有找到路径两种情况处理不统一的问题</strong>（刚开始就在这里纠缠，导致代码很臃肿，同时逻辑也混乱。）</p>
+<p>一句话：深刻理解递归是解出来此题的关键。<strong>递归实质上就是一个出栈入栈的过程</strong>。</p>
+<h3 id="代码"><a href="#代码" class="headerlink" title="代码"></a>代码</h3><pre><code>package com.tree;
+
+import java.util.ArrayList;
+import java.util.LinkedList;
+
+class TNode {
+    int data;
+    TNode left;
+    TNode right;
+
+    public TNode(int data) {
+        this.data = data;
+        this.left = this.right = null;
+    }
+}
+
+/* 找出二叉树中等于某一值的所有路径 */
+public class TreePath {
+    public static void AddPath(TNode tnode, LinkedList&lt;TNode&gt; list, int sum,
+            int num) {
+        if (tnode == null)
+            return;
+        list.offer(tnode);
+        if (tnode.left == null &amp;&amp; tnode.right == null) { // leaf node
+            if (sum + tnode.data == num) {
+                PrintPath(list);
+            } 
+
+        } else { // non-leaf node
+            if (tnode.data + sum &lt; num) {
+                sum += tnode.data;
+                AddPath(tnode.left, list, sum, num);
+                AddPath(tnode.right, list, sum, num);
+            }
+        }
+        list.pollLast();
+    }
+
+    public static void PrintPath(LinkedList&lt;TNode&gt; list) {
+        int i;
+        for (i = 0; i &lt; list.size(); i++) {
+            System.out.print(list.get(i).data + &quot;---&quot;);
+        }
+        System.out.println(&quot;NULL&quot;);
+    }
+
+    public static TNode BuildTree(int[] arr) {
+        ArrayList&lt;TNode&gt; nodelist = new ArrayList&lt;TNode&gt;();
+        if (arr == null)
+            return null;
+        if (arr.length == 1) { // 如果数组中只有一个元素
+            TNode root = new TNode(arr[0]);
+            return root;
+        }
+
+        // 将数组转化成二叉树结点
+        for (int i = 0; i &lt; arr.length; i++) {
+            nodelist.add(new TNode(arr[i]));
+        }
+
+        TNode root = nodelist.get(0);
+        for (int j = 0; j &lt; arr.length / 2 - 1; j++) {
+            nodelist.get(j).left = nodelist.get(2 * j + 1);
+            nodelist.get(j).right = nodelist.get(2 * j + 2);
+        }
+        int lastParentIndex = arr.length / 2 - 1;
+        nodelist.get(lastParentIndex).left = nodelist
+                .get(2 * lastParentIndex + 1);
+        if (arr.length % 2 == 1)
+            nodelist.get(lastParentIndex).right = nodelist
+                    .get(2 * lastParentIndex + 2);
+
+        return root;
+    }
+
+    public static void main(String[] args) {
+        int[] arr = { 1, 2, 3, 3, 5, 4, 8, 2 };
+        int[] arr2 = { 15 };
+        int[] arr1 = { 1, 2, 3, 6, 5, 4 };
+        TNode root = BuildTree(arr);
+        LinkedList&lt;TNode&gt; list = new LinkedList&lt;TNode&gt;();
+        AddPath(root, list, 0, 9);
+        if(list.isEmpty())
+            System.out.println(&quot;Sorry there is no path&quot;);
+    }
+}
+</code></pre><h3 id="备注"><a href="#备注" class="headerlink" title="备注"></a>备注</h3><h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><p>说实话，这道题可能是做剑指offer以来，感觉最无头绪的一道题。刚拿到这个题的时候，完全没有感觉，不知道怎么去做。现在竟然没有看答案就做出来了，这样的感觉很好，又给自己增加一点点自信，继续保持！</p>
+<p>PS : 看了剑指offer的分析过程，想到遇到这种可以用递归的方法解决问题的时候，尽量列表格，填写变量的值，这样可以更快的找到规律。</p>
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2015/07/18/将二叉搜索树改变为双向链表/" title="将二叉搜索树改变为双向链表" class="prev">PREV</a><a href="/2015/07/17/判断数组是否是二叉搜索树的后序遍历序列/" title="判断数组是否是二叉搜索树的后序遍历序列" class="next">NEXT</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

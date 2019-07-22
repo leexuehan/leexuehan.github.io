@@ -1,0 +1,273 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.8.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> Servlet 解析 · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Servlet 解析 - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">Servlet 解析</h1><div class="post-info">2015-07-22<p class="visit"><i data-identity="2015/07/22/Servlet-解析/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><p><strong>Servlet的作用是什么</strong></p>
+<p>因为我们的资源请求都是从浏览器中发出的，那么必然会有一个服务器来接受此请求，然后返回我们需要的资源。</p>
+<p>因为我们发出的请求一般都是通过 Http 协议来承载的，所以服务器一般也就是 Http 服务器。如果你用的是FTP协议，可能还会有 FTP服务器。</p>
+<p>Web请求的一般过程：建立连接-发送请求-应答过程-关闭连接。</p>
+<p>这里有一张画得很不错的图：</p>
+<p><img src="https://cloud.githubusercontent.com/assets/12984324/9716850/69a374ce-55a0-11e5-955a-8d9bcd7e0ce6.png" alt="tomcat server"></p>
+<p>可见：Servlet就是Http服务器用来处理此请求的一个载体。</p>
+<p>从浏览器（Client）获取连接”/helloWorld.html”</p>
+<p>Connector模块要做的事情：</p>
+<p>Tomcat Connector模块将请求(Request)传递给 Container模块。</p>
+<p>Container 模块会做以下事情：<br>分析HTPP请求信息，<br>组装成HttpServletRequest对象，<br>创建新的HttpServletResponse对象，<br>根据配置文件，搜索相应的Servlet，并创建一个线程用于处理本次请求。<br>此时线程会将上面Request和Response对象的索引，传递给Servlet。</p>
+<p>新线程中的Servlet处理逻辑：<br>线程结束后，通过HttpServletResponse对象的PrintWriter，返回浏览器一个信息。</p>
+<p>在建立连接以后的处理请求、发送响应等过程都离不开 Servlet。所以容器一般也叫 Servlet 引擎。而自然，因为 Http 请求方法众多，所以 HttpServlet 也必须有对应的 doGet(),doPost(),doPut()等等方法，来与之对应。</p>
+<p><strong>Servlet 的生命周期</strong></p>
+<p>类加载、实例化，init方法，service方法，destroy方法。关于这点，后面会有详细介绍。</p>
+<p><strong>什么是容器？</strong></p>
+<p>因为Servlet没有main方法，所以它受控于另一个Java应用，这个应用就叫容器。而Tomcat就是这样一个容器之一。</p>
+<p><strong>容器的作用</strong></p>
+<p>容器来管理和运行Servlet。具体负责以下几项：</p>
+<p>1.通信支持：让Servlet与Web服务器对话，而不需要自己建立ServerSocket、监听端口、创建流等。容器知道自己和Web服务器的协议。</p>
+<p>2.生命周期管理：负责加载类、实例化和初始化Servlet、调用Servlet方法，并使Servlet实例能够被垃圾回收。</p>
+<p>3.多线程支持：容器自动为每个Servlet请求创建一个新的Java线程，针对客户的请求，如果Servlet已经运行完相应的HTTP服务方法，这个线程就会挂掉。</p>
+<p>4.声明方式实现安全：利用容器可以使用XML部署描述文件来配置和修改安全性，而不必将其硬编码到Servlet类代码中。</p>
+<blockquote>
+<p>不用重新编译，就能修改和管理安全配置，不亦快哉！</p>
+</blockquote>
+<p>5.最关键的是支持JSP：容器负责吧JSP翻译成java.</p>
+<p><strong>Servlet为什么是Servlet？</strong></p>
+<p>一般来说，绝大部分的Servlet中都是httpServlet，绝大部分的httpServlet都会覆盖doGet()或者doPost()方法。</p>
+<p>doPost()或者doGet()方法里面的参数，就是创建的请求和响应对象的引用。</p>
+<p><strong>容器怎么找到Servlet？</strong></p>
+<p>一种通用的方法就是使用部署描述符文件将URL映射到Servlet。</p>
+<p>这样的好处有很多，其中最大的好处就是：非程序员也可以修改和部署你的web应用。</p>
+<hr>
+<p>简言之，Servlet的存在就是要为客户服务，Servlet的任务就是得到一个请求，再发回一个响应。</p>
+<hr>
+<p><strong>servlet家族</strong></p>
+<p>如图所示<br><img src="https://cloud.githubusercontent.com/assets/12984324/8826049/315fdbde-30b6-11e5-9306-3fc37d42d7bd.png" alt="6-27-1"></p>
+<p><strong>Servlet生命周期的三大重要时刻</strong></p>
+<p>1.init():<br>在Servlet实例创建之后，并在为客户请求提供服务之前，容器要对Servlet调用此方法。</p>
+<p>如果有初始化代码（比如得到一个数据库连接，或者向其他对象注册）就要覆盖此方法。</p>
+<p>2.service():<br>第一个客户请求到来时，容器开始一个新线程，或者从线程池分配一个县城，并调用Servlet的service()方法。</p>
+<p>3.doPost()/doGet()</p>
+<p>主要在这里写业务代码。</p>
+<h3 id="注意：容器为每一个请求都提供一个单独的线程运行。"><a href="#注意：容器为每一个请求都提供一个单独的线程运行。" class="headerlink" title="注意：容器为每一个请求都提供一个单独的线程运行。"></a>注意：容器为每一个请求都提供一个单独的线程运行。</h3><p><strong>ServletConfig对象</strong></p>
+<ul>
+<li>每一个Servlet都有一个ServletConfig对象。</li>
+</ul>
+<ul>
+<li>用于访问ServletContext。</li>
+</ul>
+<p><strong>ServletContext对象（AppContext）</strong></p>
+<ul>
+<li>每一个Web应用有一个ServletContext。</li>
+</ul>
+<ul>
+<li>用于访问Web应用的参数</li>
+</ul>
+<ul>
+<li>用于得到服务器信息，包括容器名和容器版本。</li>
+</ul>
+<p><strong>关于请求和响应</strong></p>
+<h3 id="请求："><a href="#请求：" class="headerlink" title="请求："></a>请求：</h3><blockquote>
+<p>HttpServletRequest和HttpServletResponse接口由谁来实现？</p>
+</blockquote>
+<blockquote>
+<p>答:由容器来实现。</p>
+</blockquote>
+<blockquote>
+<p>http请求方法除了POST和GET还有那些？</p>
+</blockquote>
+<blockquote>
+<p>HEAD —–只要求得到GET返回的首部部分，所以这有点想GET，但是响应中没有体。</p>
+</blockquote>
+<blockquote>
+<p>TRACE—–要求请求消息回送，这样客户能看到另一端接受了什么。以便排错。</p>
+</blockquote>
+<blockquote>
+<p>PUT—-指出要把所包含的信息放在请求的URL上。</p>
+</blockquote>
+<blockquote>
+<p>DELETE—-删除请求Url的一个资源。</p>
+</blockquote>
+<blockquote>
+<p>OPTIONS—-要求得到一个HTTP方法列表。</p>
+</blockquote>
+<blockquote>
+<p>CONNECT—-要求连接以便建立隧道。</p>
+</blockquote>
+<p><strong>POST和GET的区别</strong></p>
+<blockquote>
+<p>区别一：POST有消息体。GET方法对请求参数有限制，参数数据只能放在请求行的内容中。而且POST方法可以发送较大的数据。</p>
+</blockquote>
+<blockquote>
+<p>区别二：安全性的问题。GET方法，参数的数据会显示到输入地址栏里面，是明文显示。</p>
+</blockquote>
+<blockquote>
+<p>区别三：使用场合不同。GET 方法仅仅用来得到某些东西。对服务器不能做出任何改变。POST则用户发送数据来进行处理。</p>
+</blockquote>
+<h3 id="响应："><a href="#响应：" class="headerlink" title="响应："></a>响应：</h3><p>响应是要返回给客户。这是浏览器得到、解析并呈现给用户的东西。一般来说，要用响应得到一个输出流，通常是Writer，并使用这个流写出HTML，返回去给客户。但是应该还有其他办法。</p>
+<p>大多数情况下，使用响应是为了向客户发回数据，会对响应调用两个方法：setContentType()和getWriter().</p>
+<ul>
+<li>setContentType():</li>
+</ul>
+<p>函数功能：告诉浏览器返回了什么，这样浏览器才能根据响应的内容，调用适当的辅助应用，来展现之。这里的内容类型就是MIME类型。</p>
+<blockquote>
+<p>常用的MIME类型：</p>
+</blockquote>
+<blockquote>
+<p>text/html</p>
+<p>application/pdf</p>
+<p>video/quicktime</p>
+<p>application/java</p>
+<p>image/jpeg</p>
+<p>application/jar</p>
+<p>application/octet-stream</p>
+<p>application/x-zip</p>
+</blockquote>
+<blockquote>
+<p>关于输出响应：</p>
+</blockquote>
+<blockquote>
+<p>ServletResponse接口只提供了两个流可供选择：ServletOutputStream用于输出字节，PrintWriter用于输出字符数据。</p>
+</blockquote>
+<pre><code>PrintWriter writer = response.getWriter();
+
+writer.println(&quot;some text and HTML&quot;);
+
+ServletOutputStream out = response.getOutputStream();
+
+out.write(aByteArray);
+</code></pre><p>PrintWriter 实际上包装了ServletOutputStream.关于装饰器模式，请参见博文<a href="http://www.cnblogs.com/xuehanlee/p/4603998.html" target="_blank" rel="noopener">http://www.cnblogs.com/xuehanlee/p/4603998.html</a></p>
+<p><strong>设置响应首部和增加响应首部</strong></p>
+<p>response.setHeader();</p>
+<p>response.addHeader();</p>
+<p>这两种方法顾名思义，只有在响应中还没有首部时，才一样，如果响应中已经有了首部，则后者是增加一个值，而前者会覆盖现有的值。</p>
+<h3 id="Servlet重定向"><a href="#Servlet重定向" class="headerlink" title="Servlet重定向"></a>Servlet重定向</h3><p>response.sendRedirect(“url”);</p>
+<p>这个方法能使浏览器重新发一个请求，来请求url对应的资源。此时浏览器上的地址会发生变化。</p>
+<h3 id="Servlet分派"><a href="#Servlet分派" class="headerlink" title="Servlet分派"></a>Servlet分派</h3><p>重定向让浏览器重新发一条请求，而分派则是让服务器去指派资源来完成任务，此时用户根本不知道里面发生了什么，总之，最后服务器顺利的将资源呈现在浏览器。过程对于用户来说是完全透明的。</p>
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2015/07/22/Servlet-初始化/" title="Servlet 初始化" class="prev">PREV</a><a href="/2015/07/22/Servlet过滤器/" title="Servlet过滤器" class="next">NEXT</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

@@ -1,0 +1,208 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.8.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> 找出最小的 K 个数 · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="找出最小的 K 个数 - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">找出最小的 K 个数</h1><div class="post-info">2015-07-21<p class="visit"><i data-identity="2015/07/21/找出最小的-K-个数/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><h2 id="剑指offer面试题系列"><a href="#剑指offer面试题系列" class="headerlink" title="剑指offer面试题系列"></a>剑指offer面试题系列</h2><blockquote>
+<p>题目：输入 n 个整数，找出其中最小的 k 个数。</p>
+</blockquote>
+<h3 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h3><p>思路一：</p>
+<p>构建小顶堆，每次取最顶上的数字，然后进行调整。时间复杂度：O(klgN).</p>
+<p>思路二：</p>
+<p>就是前面提到的，基于快速排序的Partion方法，不断递归分割直到枢纽元素的位置位于第K个。</p>
+<p><strong>因为以上两种方法都对原数组做了改变，如果要求不能对于数组进行改变的话，则就需要想另外一种方法了</strong>。</p>
+<p>思路三：</p>
+<p>先分配一个大小为K的数组，存放最小的四个元素。初始化为整数序列的前 K 个元素。然后将这 K 个元素构建称为大顶堆。</p>
+<p>从第 K+1 个整数开始遍历，如果遍历到的整数小于根节点的元素，则将根节点的元素换成此整数，进行大顶堆调整。依次类推，直到遍历完整个整数序列。</p>
+<p>数组中剩下的 K 个元素就是最小的 K 个数。</p>
+<p>算法复杂度：O(NlgK)</p>
+<p>因为前面的文章里已经写了如何构造大顶堆了（参见《算法温习之排序》），所以此处大顶堆的代码略去，只写思路一用构建小顶堆的方法。</p>
+<h3 id="代码"><a href="#代码" class="headerlink" title="代码"></a>代码</h3><pre><code>package com.study;
+
+/*找出最小的k个数*/
+public class Solution17 {
+    private static final int NUM = 4;
+    public static void FindMinK(int[] a, int[] minK, int K) {
+        int len = a.length;
+        BuildMinHeap(a, a.length);
+        for (int i = 0; i &lt; K; i++) {
+            minK[i] = a[0];
+            len--;
+            a[0] = a[len];
+            BuildMinHeap(a, len);
+        }
+    }
+
+    public static void BuildMinHeap(int[] arr, int len) {
+        int hole = 0;
+        int child = 0;
+        for (int i = len / 2 - 1; i &gt;= 0; i--) {
+            hole = i;
+            int tmp = arr[hole];
+            for (; hole * 2 &lt; len; hole = child) {
+                child = 2 * hole + 1;
+                if (child + 1 &lt; len &amp;&amp; arr[child] &gt; arr[child + 1]) {
+                    child++;
+                }
+                if (tmp &gt; arr[child]) {
+                    arr[hole] = arr[child];
+                } else {
+                    break;
+                }
+            }
+            arr[hole] = tmp;
+
+        }
+    }
+
+    public static void Swap(int[] arr, int i, int j) {
+        int tmp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = tmp;
+    }
+
+    public static void main(String[] args) {
+        int[] arr = { 9, 7, 4, 2, 5, 3, 1, 8, 6 };
+        int[] out = new int[NUM];
+        FindMinK(arr, out, NUM);
+        for (int i = 0; i &lt; arr.length; i++) {
+            System.out.print(arr[i] + &quot; &quot;);
+        }
+
+        System.out.println();
+        for (int k = 0; k &lt; out.length; k++) {
+            System.out.print(out[k] + &quot; &quot;);
+        }
+    }
+}
+</code></pre><h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><p>又复习了一下堆排序，发现还是前面的理解还是没有太透彻，所以又写了一个构建小顶堆来复习了一下。一位学长说，基础的这些排序得写十遍才能记住，所言不虚，每写一遍，理解都深刻一点。</p>
+<p>堆排序在处理大数据方面有着重要应用。尤其是外排序，基本都用到了堆排序的思想，要对其滚瓜烂熟。</p>
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2015/07/22/Java-内存模型（二）/" title="Java 内存模型（二）" class="prev">PREV</a><a href="/2015/07/21/Java-内存回收（三）/" title="Java 内存回收（三）" class="next">NEXT</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

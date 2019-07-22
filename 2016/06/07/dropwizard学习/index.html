@@ -1,0 +1,164 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.8.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> dropwizard学习（一) · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="dropwizard学习（一) - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">dropwizard学习（一)</h1><div class="post-info">2016-06-07<p class="visit"><i data-identity="2016/06/07/dropwizard学习/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><h2 id="前面的废话"><a href="#前面的废话" class="headerlink" title="前面的废话"></a>前面的废话</h2><p>不知道从什么时候开始，自己觉得之前的方法有些效率低，于是尝试改变一下之前不好的学习习惯。自己总结科学的学习无非就是遵从人的理解规律和记忆规律。</p>
+<p>看过金字塔原理的人都知道，人对于梳理和归类好的东西有天然的好感，即更容易记忆和理解。所以自己不允许接触到一个新东西之后没有自己的理解和梳理。所谓的理解和梳理最好的呈现方式无非就是：归类和画图。</p>
+<p>个人觉得理解任何东西，都要从架构上去把握，然后再去抠细节。</p>
+<a id="more"></a>
+<p>这几天正好用到了 dropwizard，所以想把自己对于这个轻量级框架的理解梳理一下。</p>
+<h2 id="dropwizard是什么"><a href="#dropwizard是什么" class="headerlink" title="dropwizard是什么"></a>dropwizard是什么</h2><p>dropwizard按照官方给出的定义如下：</p>
+<blockquote>
+<p>Dropwizard is a Java framework for developing ops-friendly, high-performance, RESTful web services.</p>
+</blockquote>
+<p>翻译成中文就是：Dropwizard是一个用来开发友好、高性能 RESTful服务的Java框架。</p>
+<p>那么什么又是 RESTful 服务呢？</p>
+<p>如果你去谷歌的话，会有好多特别专业的术语冒出来，让人晕头转向。我看到一个最通俗的说法就是：</p>
+<blockquote>
+<p>看url就知道想要什么</p>
+</blockquote>
+<blockquote>
+<p>看http method就知道要干什么</p>
+</blockquote>
+<blockquote>
+<p>看http status code就知道结果如何</p>
+</blockquote>
+<p>可能这个说法不是很准确，但是至少给我们形成了一个大致的概念，我想对于初学者应该够了。</p>
+<h2 id="dropwizard架构"><a href="#dropwizard架构" class="headerlink" title="dropwizard架构"></a>dropwizard架构</h2><p>dropwizard的主要模块如下：</p>
+<p><img src="http://o8ahjnaal.bkt.clouddn.com/dropwizard.PNG" alt></p>
+<p>可以看到，dropwizard里面继承了一个jetty服务器，用来处理http请求。利用jersy处理web应用，jackson映射对象。此外，还有其他模块，但是核心的就这三块。</p>
+<h2 id="怎么使用dropwizard编写restful程序"><a href="#怎么使用dropwizard编写restful程序" class="headerlink" title="怎么使用dropwizard编写restful程序"></a>怎么使用dropwizard编写restful程序</h2><p>我画了一张程序组织图：</p>
+<p><img src="http://o8ahjnaal.bkt.clouddn.com/%E7%A8%8B%E5%BA%8F%E7%BB%84%E7%BB%87%E7%BB%93%E6%9E%84.png" alt></p>
+<p>比较清楚地描述出来dropwizard的程序应该怎么写。</p>
+<p>具体的例子，可以在官方网站上搜到，这里就不作文抄公了。</p>
+<p>我想在你了解了整个架构之后，就可以直接移步这里了。<a href="http://www.dropwizard.io/0.9.2/docs/getting-started.html" target="_blank" rel="noopener">官网链接</a>.</p>
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2016/06/08/mac使用hexo搭建博客/" title="mac使用hexo搭建博客" class="prev">PREV</a><a href="/2015/10/11/十月感想/" title="十月感想" class="next">NEXT</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

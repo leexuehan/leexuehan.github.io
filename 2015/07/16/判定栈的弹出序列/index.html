@@ -1,0 +1,283 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.8.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> 判定栈的弹出序列 · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="判定栈的弹出序列 - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">判定栈的弹出序列</h1><div class="post-info">2015-07-16<p class="visit"><i data-identity="2015/07/16/判定栈的弹出序列/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><h2 id="剑指offer面试题系列"><a href="#剑指offer面试题系列" class="headerlink" title="剑指offer面试题系列"></a>剑指offer面试题系列</h2><blockquote>
+<p>题目：输入两个整数序列，第一个序列表示栈的压入顺序，请判断第二个序列是否为该栈的弹出序列。假设压入栈的所有数字均不相等。例如：序列1、2、3、4、5是某栈的压入序列，序列4、5、3、2、1是该压栈序列对应的弹出序列，但4、3、5、1、2就不是该压栈序列对应的弹出序列。</p>
+</blockquote>
+<h3 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h3><p><strong>后压入栈的元素不可能比先压入栈的元素先出栈</strong>，利用栈的这条定理就可以想明白这个问题，最开始的思路是从两个数组中找出某种规律来，就像前面做过的一道题，利用二叉树的先序遍历和中序遍历来重建二叉树。但是最终由于处理起来太过复杂而没有实现。</p>
+<p>这个思路行不通，只能用一个辅助栈来实现了。</p>
+<p>就拿例子中的序列来说 1、2、3、4、5，因为栈弹出的元素永远在栈顶，所以要想弹出4，必须将1、2、3依次入栈。于是1、2、3 弹出的顺序只能是 3、2、1，在下面的版本一种就是利用这种想法实现的，但是没有估计到在弹出一次栈顶元素后复杂的情况。</p>
+<p>版本二的思路就是：遍历出栈数组，因为<strong>出栈序列的元素必须是栈顶元素</strong>，所以必须将所遍历到元素前面的元素压入栈中，继续往前遍历，如果遍历到的元素已经入栈（这个通过cur游标和出栈数组在入栈数组中的位置pos的关系来判断），则直接出栈，与出栈元素比较，相等则继续遍历，不等则break跳出；如果遍历到的元素没有入栈，则将入栈序列中该元素前面的元素全部入栈。以此类推。</p>
+<h3 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h3><p>版本一（错误版本）：</p>
+<pre><code>public static boolean IsRight(int[] pushArr, int[] popArr) {
+        boolean isRes = true;
+        int pos = FindPos(popArr[0], pushArr);
+        if (pos == -1)
+            return false;
+
+        int rlength = pushArr.length - 1 - pos;
+        int llength = pos;
+        int k = 0;
+        if (rlength &gt; 0) {
+            for (k = 1; k &lt;= rlength; k++) { // 比较右半部分
+                if (pushArr[k + pos] != popArr[k]) {
+                    isRes = false;
+                    break;
+                }
+            }
+        }
+
+        if (llength &gt; 0) {
+            for (; k &lt;= popArr.length - 1 &amp;&amp; pos &gt;= 0; k++) { // 比较左半部分
+                if (popArr[k] != pushArr[--pos]) {
+                    isRes = false;
+                    break;
+                }
+            }
+        }
+
+        return isRes;
+    }
+
+    // find the position in arr
+    public static int FindPos(int num, int[] arr) {
+        int i = 0;
+        int pos = -1;
+        while (i &lt; arr.length) {
+            if (arr[i] == num) {
+                pos = i;
+                break;
+            }
+            i++;
+        }
+
+        if (pos &gt;= 0)
+            return pos;
+        else
+            return -1;
+    }
+</code></pre><p>版本二：</p>
+<pre><code>package com.study;
+class MainStack {
+    private static final int MAXSIZE = 10;
+    private static int point = 0; // 指向栈顶
+    private static int[] arr = new int[MAXSIZE];
+
+    public static int getTop() {
+        if (point &gt; 0)
+            return arr[point - 1];
+        else
+            return -1;
+    }
+
+    public static boolean isEmpty() {
+        return point &lt;= 0;
+    }
+
+    public static void push(int data) {
+        if (point &lt; MAXSIZE) {
+            arr[point] = data;
+            point++;
+        } else {
+            System.out.println(&quot;The stack is full&quot;);
+        }
+    }
+
+    public static int pop() {
+        if (point &gt; 0) {
+            point--;
+            return arr[point];
+        } else {
+            return -1;
+        }
+    }
+}
+
+public class suanfa14 {
+    private static int[] push = { 1, 2, 3, 4, 5, 6, 7 };
+    private static int[] pop = { 5, 4, 6, 7, 3, 2, 1 };
+    private static int[] pop1 = { 4, 5, 3, 1, 2 };
+
+    /*
+     * 新版，利用两个栈来完成判断
+     */
+    public static boolean Judge(int[] pushArr, int[] popArr) {
+        boolean DoMatch = true;
+        int cur = 0; // pushArr中已经压入栈元素界限
+        int pos = 0; //popArr中的元素在pushArr中的位置
+        for (int i = 0; i &lt; popArr.length; i++) {
+            pos = FindPos(popArr[i], pushArr);
+            if (MainStack.getTop() != popArr[i]) { // 如果出栈序列的元素不在栈顶上
+                if (pos &gt;= cur) { // 如果元素还没有被压入栈
+                    while (cur &lt;= pos) { // 将其前面的元素直接压栈
+                        MainStack.push(pushArr[cur]);
+                        cur++;
+                    }
+                }
+            }
+
+            // 比较过程
+            if (MainStack.pop() != popArr[i]) {
+                DoMatch = false;
+                break;
+            }
+
+        }
+
+        return DoMatch;
+    }
+
+    public static int FindPos(int num, int[] arr) {
+        int i = 0;
+        int pos = -1;
+        while (i &lt; arr.length) {
+            if (arr[i] == num) {
+                pos = i;
+                break;
+            }
+            i++;
+        }
+
+        if (pos &gt;= 0)
+            return pos;
+        else
+            return -1;
+    }
+
+    public static void main(String[] args) {
+        System.out.println(Judge(push, pop));
+    }
+}
+</code></pre><h3 id="备注"><a href="#备注" class="headerlink" title="备注"></a>备注</h3><p>需要注意在判断出栈数组中的元素是否入栈时，pos和cur的比较关系需要加相等符号，因为可能只有只需要将一个元素入栈即可。</p>
+<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><p>理性分析能力还是需要多加锻炼，当你茫无头绪时，一定要记得去努力寻找规律，条分缕析。越来越发现自己一个思维上的不好的习惯就是：过分依赖长期训练所产生的一种感觉，如果拿到这个题，没有找到感觉，就会不知所措。这样的思维高三消失了一年，现在毛病又来了，一定要改，<strong>要理性的思考问题</strong>，这样才能不知会做熟题，也会做生题。</p>
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2015/07/17/层序遍历二叉树/" title="层序遍历二叉树" class="prev">PREV</a><a href="/2015/07/16/min元素栈/" title="min元素栈" class="next">NEXT</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

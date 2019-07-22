@@ -1,0 +1,242 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.8.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> MySQL学习笔记之redo/bin log · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="MySQL学习笔记之redo/bin log - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">MySQL学习笔记之redo/bin log</h1><div class="post-info">2019-07-18<p class="visit"><i data-identity="2019/07/18/MySQL学习笔记之redo-bin-log/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><p><a href="https://leexuehan.github.io/2019/07/18/MySQL%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0%EF%BC%88%E4%B8%80%EF%BC%89/">上一篇文章</a>讲到了我们对一个表执行查询的时候，MySql底层发生了什么。</p>
+<p>这篇文章主要记录在对一张表执行字段更新的时候，MySQL 底层是怎么运作的。</p>
+<a id="more"></a>
+<h4 id="更新表字段"><a href="#更新表字段" class="headerlink" title="更新表字段"></a>更新表字段</h4><p>假设我们现在有一张表 T，要更新 ID 为 1 所在的那一行的一个整型字段 c （从 1 变为 2）。</p>
+<p>会点简单的 SQL 语句基础的都知道，我们应该使用下面一行语句：</p>
+<blockquote>
+<p>update T set c = c+ 1 where ID = 1</p>
+</blockquote>
+<p>我们再把上一篇文章中的图拿过来。</p>
+<p><div align="center"><img src="./mysql_structure.jpg" alt="MySQL基本架构"></div></p>
+<p>我们顺着上一篇文章的流程来分析：</p>
+<p>1.连接器</p>
+<p>首先请求走到了连接器，与服务端建立连接、获取权限。</p>
+<p>2.查询缓存</p>
+<p>上一篇文章我们知道：缓存中存储的是<strong>查询语句</strong>和<strong>查询结果</strong>组成的键值对。</p>
+<p>如果在我们执行update语句之前，有人执行过对该字段的查询语句，则此时查询缓存会如图：</p>
+<p><div align="center"><img src="./cache.png" alt="查询缓存"></div></p>
+<p>因为这是个查询缓存，而我们所执行的是一个 update 语句，所以显然缓存中是没有的，所以接下来会进入分析器进行分析语句类型。</p>
+<p><strong>注意：最新的 MySql 版本中，查询缓存已经沦为历史。后面我们就知道了，这个缓存比较鸡肋，食之无味，弃之可惜</strong>。</p>
+<p>3.分析器</p>
+<p>到分析器这，才会分析该语句到底是什么类型的语句，要进行什么操作。</p>
+<p>此处分析为 update，MySQL为了防止<strong>缓存不一致</strong>的现象产生，则会使得查询缓存中所有关于 T 表的 key-value 对失效。</p>
+<p>分析完语句的词法和语法之后，马上进入优化器部分。</p>
+<p>4.优化器</p>
+<p>此时优化器看到了是以 ID 为条件进行筛查的，所以决定使用 ID 这个索引。</p>
+<p>先找到 ID=1 这一行。</p>
+<p>将这行的 c 字段内容读到内存 buffer pool 中，进行更新（这也是一种常见的更新套路：从磁盘中读出这个字段的值到内存，更新内存中这个字段的内容，然后再写回到磁盘）。</p>
+<p>此时就进入本文的核心部分，将字段 c 的值读到内存中，更新字段 c 的值之后，接下来会发生什么？</p>
+<p>这就涉及到两个重要的日志模块：redo log 和 binlog。</p>
+<p>在介绍这两个模块之前，不妨设想一下，如果是让我们来实现这个更新过程，我们会怎么做？</p>
+<p>我觉得主要应该考虑下面两方面的问题：</p>
+<p>一、性能问题</p>
+<p>更新的过程要快，就像我们去餐馆吃饭，肯定是希望服务员能够以最快的速度把菜端上来，不能让我们老等着。</p>
+<p>二、健壮性问题</p>
+<p>要想到各种异常情况，比如更新的时候，MySQL服务器挂掉了重启怎么办？我往我的银行卡里面转账时，不能因为更新我银行卡余额的时候，银行的数据库服务器挂掉了，就不给我的账户余额加钱。</p>
+<p>或者我不小心误删了或者误改了什么东西，现在想纠正过来，不能不给我机会是吧。</p>
+<p>这些问题 MySQL 是怎么解决的呢？</p>
+<p>针对性能问题，它使用了 redo log 日志模块。</p>
+<h5 id="redo-log"><a href="#redo-log" class="headerlink" title="redo log"></a>redo log</h5><p>想象一下，如果MySQL的一张表里存储了100w条数据，这个时候，我只要对其中的一条进行更改。</p>
+<p>按照既有套路，肯定是先找到那条记录，然后再进行更新，写入新值到数据文件中。</p>
+<p>可是即使数据库在查询那条数据时，做了该做的优化，但是从 100w 条数据里去找到那条记录还是比较耗时的操作。</p>
+<p>所以，MySQL 的 InnoDB 存储引擎弄了一个 redo log 模块。</p>
+<p>这个模块相当于一个临时记账小本本，我来不及处理，先记到小本本上，等有空了，我再从小本本整理到我的数据库里。</p>
+<p>那么这个“小本本”长什么样？</p>
+<p>它是物理日志，是一组直接存储在磁盘上的文件。这个组数是固定大小的，一组每个文件的大小一般是1GB，如果我们这组总共有 4 个文件，那么这个小本本的大小为 4GB。</p>
+<p>这个“小本本”记录的是什么？</p>
+<p>记录的是那些表做了哪些改动，比如针对我们上面的场景就是“在表 T 上更新 c 字段的值为 2”。</p>
+<p>小本本写满了怎么办？</p>
+<p>这个问题问得好，小本本的数据结构类似一个环形数组，我们可以理解为只有 4 页纸的笔记本，如图：</p>
+<p><div align="center"><img src="./redolog.png" alt="redolog"></div></p>
+<p>write pos 表示当前记录的位置。</p>
+<p>check point 表示当前要擦除的位置。</p>
+<p>它们都是顺时针往后推移，并且是循环的。</p>
+<p>也就是说小本本第 4 页纸都写满了，可以擦掉第一页的内容继续写，但是在擦掉之前记录的内容前，要更新内容到数据文件（要不然不是白记了么）。</p>
+<p>有了这个小本本，服务器就不怕重启了，重启之后服务器一看小本本。就知道自己挂之前，用户做了什么操作，如果上次有什么操作没有做完，则继续做完就是了。</p>
+<p>这种能力叫 crash-safe。</p>
+<p>但是注意：这种通过 redo log 实现 crash-safe 的能力<strong>只有 InnoDB引擎</strong>才具备，其他存储引擎是没有这个能力的。</p>
+<p>至此，第一个问题，我们算是有了一个解决方案，有了记账小本本，我们会保证很快响应用户的操作，而这个方案也顺便解决了重启恢复的问题。</p>
+<h5 id="binlog"><a href="#binlog" class="headerlink" title="binlog"></a>binlog</h5><p>第二个问题：健壮性问题。</p>
+<p>我们想实现能够恢复到半个月之前（或者更早）任意一秒数据库的状态怎么办？</p>
+<p>有人说不是有 redo log 么。但是 redo log 是循环写入的，也就是说如果 redo log 满了之后，后面的添加的新数据就会覆盖老数据了。</p>
+<p>比如这个小本本只能记录一天的操作，那么昨天的操作肯定已经被今天的操作覆盖了。</p>
+<p>这个时候，我们是无法得知昨天之前，我们对数据库做了什么的。</p>
+<p>所以要想实现恢复功能，还需要另外一个机制：binlog。</p>
+<p>MySQL 在 Server 层实现了一个 binlog 日志模块，这个模块是所有引擎可以共享使用的。</p>
+<p>binlog 不是循环写的，而是<strong>追加式</strong>的。也就是说服务器会不断往一个 binlog 文件写，直到文件大小达到一定值，然后再继续写入下一个文件。</p>
+<p>binlog 是什么形式的，记录了什么？</p>
+<p>binlog 是一个二进制文件，里面记录了类似 sql 的东西，所以如果涉及多表修改的话，一个更新动作可能会对应多行 binlog。</p>
+<p>有了以上问题的思考，我们再来看下到底是怎么执行更新的。</p>
+<p>首先来看张流程图：</p>
+<p><div align="center"><img src="./flow.jpg" alt="写入流程"></div></p>
+<p>上图“写入新行”之前的流程好理解。但是为什么在“新行更新到内存”后，不是简单顺序执行：写入 redo log，写入 binlog 或者 写入 binlog，写入 redo log 呢？</p>
+<p>这就涉及到了事务中常见的一种套路：两阶段提交（2PC，2 phase commit）。</p>
+<p>设想一下：</p>
+<p>如果我们按照下面的流程实现：</p>
+<blockquote>
+<p>更新内存中 c 字段的值 —&gt; 写入 redo log —-&gt; 写入 binlog</p>
+</blockquote>
+<p>那么在执行完第 2 步后，数据库服务器 crash 了。</p>
+<p>这个时候就会出现 redo log 记录的操作会领先 binlog 一步，服务器重启后，一查 redolog 中记录了要把 c 的值改为 2，所以会把 c 的值恢复为 2，<br>而 binlog 没有记录这样的动作，如果我们要使用 binlog 来恢复一个临时库的话，自然就会少一次更新的操作，造成我们恢复的临时库的内容和原库的值<strong>不一致</strong>。</p>
+<p>那么如果按照下面流程实现呢：</p>
+<blockquote>
+<p>更新内存中 c 字段的值 —&gt; 写入 binlog —-&gt; 写入 redo log</p>
+</blockquote>
+<p>同样的场景发生：在执行完第 2 步后，数据库服务器 crash 了。</p>
+<p>这个时候 binlog 会比 redo log 多一次更新，数据库服务器重启后，因为 redo log 中没有记录更新 c 的值的操作，所以不会对c进行任何操作，原库中 c 的值仍然是1。<br>而binlog中却记录。那么如果哪一天，我们要恢复到崩溃那一刻的临时库的话，就会出现临时库中 c 的值已经为 2 了（因为binlog中有记录）。</p>
+<p>所以，结论就是不能简单地顺序执行。</p>
+<p>此时我们再回头看所谓的<strong>两阶段提交</strong>是否解决了该问题。</p>
+<p>时序图如下：</p>
+<p><div align="center"><img src="./2pc_seq.jpg" alt="时序图"></div></p>
+<p>此处的 engine 可以理解为 redo log。</p>
+<p>第一阶段写入 redo log，此时 redo log 处于 prepare 阶段，同时生成了一个事件id（xid），告诉 Server，“我已经准备好更新了”。</p>
+<p>接下来 Server 会继续写入 binlog，同时会将上一步生成的xid告诉binlog，如果binlog 写入成功，那么就进入第二阶段。</p>
+<p>第二阶段：Server 通知 redo log，“好了，你可以提交了”，redo log 执行提交事务操作，完成。</p>
+<p>这个时候我们来想想异常场景的发生：</p>
+<h6 id="写入-redo-log-让它处于-prepare-状态时-crash："><a href="#写入-redo-log-让它处于-prepare-状态时-crash：" class="headerlink" title="写入 redo log 让它处于 prepare 状态时 crash："></a>写入 redo log 让它处于 prepare 状态时 crash：</h6><p>binlog没有任何更改记录，redo log也没有提交，所以重启之后，redo log是没有记录更改的，与 binlog 保持一致。不会出现重启后的<br>数据库和恢复的临时数据库的值不一致的情况。</p>
+<h6 id="写入binlog-时crash"><a href="#写入binlog-时crash" class="headerlink" title="写入binlog 时crash"></a>写入binlog 时crash</h6><p>同理，因为没有写入 binlog 成功，也没有更改 redo log 成功，所以不会出现数据不一致的情况。</p>
+<h6 id="写入binlog成功后crash"><a href="#写入binlog成功后crash" class="headerlink" title="写入binlog成功后crash"></a>写入binlog成功后crash</h6><p>此时 binlog 已经有了更改记录，但是redo log 并没有。<br>数据库服务器重启后，会<strong>读出binlog中的记录的事件id</strong>，告诉 redo log要执行更改，提交事务操作。</p>
+<p>所以，通过以上异常场景的分析，这个两阶段提交的机制确实能保证事务的正常执行，数据的一致状态。</p>
+<h5 id="一些疑问"><a href="#一些疑问" class="headerlink" title="一些疑问"></a>一些疑问</h5><p>1.为什么 binlog 之后，还需要有 redo log？为什么 binlog 没有 crash-safe 能力？</p>
+<p>答：关于这个问题，在丁奇的<a href="https://www.infoq.cn/article/M6g1yjZqK6HiTIl_9bex" target="_blank" rel="noopener">这篇文章</a>里面给出了回答，简单来说就是binlog首先最初就不是用来做 crash-safe的，然后就是单靠 binlog 无法保证事务能够在崩溃状态下提交，如果想完善的话，只能再搞出一个 redo log 类似的东西出来。</p>
+<p>2.能不能只要 redo log 不要 binlog？</p>
+<p>答：只要redo log 当然是不行的，只有一个几页纸的小本本，用不了多长时间就会写完擦掉重写，而binlog是一个陈年流水账，会记录相当长时间用户进行的操作，所以要想恢复几个月之前的备份，只能查陈年流水账。</p>
+<h4 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h4><ol>
+<li>丁奇《MYSQL 45 讲》</li>
+<li><a href="https://www.infoq.cn/article/M6g1yjZqK6HiTIl_9bex" target="_blank" rel="noopener">https://www.infoq.cn/article/M6g1yjZqK6HiTIl_9bex</a></li>
+<li><a href="https://hoxis.github.io/mysql-zhuanlan-02-redolog-binlog.html" target="_blank" rel="noopener">https://hoxis.github.io/mysql-zhuanlan-02-redolog-binlog.html</a></li>
+</ol>
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2019/07/20/MySQL事务初探/" title="MySQL中的事务" class="prev">PREV</a><a href="/2019/07/18/MySQL学习笔记（一）/" title="MySQL学习笔记之基本架构" class="next">NEXT</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

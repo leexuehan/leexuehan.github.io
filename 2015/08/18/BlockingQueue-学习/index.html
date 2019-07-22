@@ -1,0 +1,606 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.8.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> BlockingQueue 学习 · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="BlockingQueue 学习 - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">BlockingQueue 学习</h1><div class="post-info">2015-08-18<p class="visit"><i data-identity="2015/08/18/BlockingQueue-学习/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>BlockingQueue 是一个接口。<br>是支持两个附加操作的 Queue。</p>
+<p>这两个操作分别是：获取元素时等待队列变为非空，以及存储元素时等待空间变得可用。</p>
+<p>以下是其内部方法的轮廓图：</p>
+<p><img src="http://i.imgur.com/xOt0Wf2.png" alt></p>
+<pre><code>              抛出异常    特殊值         阻塞            超时
+插入         add(e)        offer(e)    put(e)        offer(e, time, unit)
+移除         remove()    poll()        take()        poll(time, unit)    
+检查         element()    peek()        不可用          不可用
+</code></pre><p>BlockingQueue 不接受 null 元素。试图 add、put 或 offer 一个 null 元素时，某些实现会抛出 NullPointerException。null 被用作指示 poll 操作失败的警戒值。</p>
+<p>BlockingQueue 可以是限定容量的。它在任意给定时间都可以有一个 remainingCapacity，超出此容量，便无法无阻塞地 put 附加元素。没有任何内部容量约束的 BlockingQueue 总是报告 Integer.MAX_VALUE 的剩余容量。</p>
+<p>BlockingQueue 实现<strong>主要用于生产者-使用者队列</strong>，但它另外还支持 Collection 接口。因此，举例来说，使用 remove(x) 从队列中移除任意一个元素是有可能的。然而，这种操作通常不会有效执行，只能有计划地偶尔使用，比如在取消排队信息时。</p>
+<p>BlockingQueue 实现是线程安全的。所有排队方法都可以使用内部锁或其他形式的并发控制来自动达到它们的目的。然而，大量的 Collection 操作（addAll、containsAll、retainAll 和 removeAll）没有 必要自动执行，除非在实现中特别说明。因此，举例来说，在只添加了 c 中的一些元素后，addAll(c) 有可能失败（抛出一个异常）。</p>
+<h3 id="方法简述："><a href="#方法简述：" class="headerlink" title="方法简述："></a>方法简述：</h3><p><strong>add</strong></p>
+<pre><code>boolean add(E e)
+</code></pre><p>将指定的元素插入此队列（如果立即可行且不会违反容量限制），在成功时返回 true，如果当前没有可用的空间，则抛出 IllegalStateException。</p>
+<p><strong>offer</strong></p>
+<pre><code>boolean offer(E e)
+</code></pre><p>将指定的元素插入此队列（如果立即可行且不会违反容量限制），当使用有容量限制的队列时，此方法通常要优于 add(E)，后者可能无法插入元素，而只是抛出一个异常。</p>
+<p><strong>remove</strong></p>
+<pre><code>E remove()
+</code></pre><p>获取并移除此队列的头。此方法与 poll 唯一的不同在于：此队列为空时将抛出一个异常。</p>
+<p><strong>poll</strong></p>
+<pre><code>E poll()
+</code></pre><p>获取并移除此队列的头，如果此队列为空，则返回 null。</p>
+<p><strong>element</strong></p>
+<pre><code>E element()
+</code></pre><p>获取，但是不移除此队列的头。此方法与 peek 唯一的不同在于：此队列为空时将抛出一个异常。</p>
+<p><strong>peek</strong></p>
+<pre><code>E peek()
+</code></pre><p>获取但不移除此队列的头；如果此队列为空，则返回 null。</p>
+<h2 id="实现"><a href="#实现" class="headerlink" title="实现"></a>实现</h2><h3 id="ArrayBlockingQueue"><a href="#ArrayBlockingQueue" class="headerlink" title="ArrayBlockingQueue"></a>ArrayBlockingQueue</h3><p>ArrayBlockingQueue 实现了 BlockingQueue 接口，并继承 AbstractQueue。其轮廓如下：</p>
+<pre><code>public class ArrayBlockingQueue&lt;E&gt; extends AbstractQueue&lt;E&gt;
+    implements BlockingQueue&lt;E&gt;, java.io.Serializable {
+    /** 用来储存队列元素的数据结构  */
+    private final E[] items;
+    /** 下一个要获取的元素下标 */
+    private int takeIndex;
+    /** 下一个要放入的元素下标 */
+    private int putIndex;
+    /** 队列中的元素总数 */
+    private int count;
+
+    /** Main lock guarding all access */
+    private final ReentrantLock lock;
+    /** Condition for waiting takes */
+    private final Condition notEmpty;
+    /** Condition for waiting puts */
+    private final Condition notFull;
+        ...
+}
+</code></pre><p>add 方法：</p>
+<pre><code>public boolean add(E e) {
+    return super.add(e);
+}
+</code></pre><p>可见其调用了基本的queue的add 方法。</p>
+<p>offer 方法：</p>
+<p>offer 方法分两种，一种是如下面的源码所示，上锁然后插入元素；另一种就是定时插入。</p>
+<pre><code>public boolean offer(E e) {
+    if (e == null) throw new NullPointerException();
+    final ReentrantLock lock = this.lock;
+    lock.lock();
+    try {
+        if (count == items.length)
+            return false;
+        else {
+            insert(e); //插入元素到队列中
+            return true;
+        }
+    } finally {
+        lock.unlock();
+    }
+}
+
+public boolean offer(E e, long timeout, TimeUnit unit)
+    throws InterruptedException {
+
+    if (e == null) throw new NullPointerException();
+long nanos = unit.toNanos(timeout);
+    final ReentrantLock lock = this.lock;
+    lock.lockInterruptibly();
+    try {
+        for (;;) {
+            if (count != items.length) {
+                insert(e);
+                return true;
+            }
+            if (nanos &lt;= 0)
+                return false;
+            try {
+                nanos = notFull.awaitNanos(nanos);
+            } catch (InterruptedException ie) {
+                notFull.signal(); // propagate to non-interrupted thread
+                throw ie;
+            }
+        }
+    } finally {
+        lock.unlock();
+    }
+}
+</code></pre><p>注意到其中调用了一个 insert 方法。其源代码如下：</p>
+<pre><code>private void insert(E x) {
+    items[putIndex] = x;
+    putIndex = inc(putIndex); //循环增加
+    ++count;
+    notEmpty.signal();
+}
+
+final int inc(int i) {
+    return (++i == items.length)? 0 : i;
+}
+</code></pre><p>put 方法：</p>
+<pre><code>public void put(E e) throws InterruptedException {
+    if (e == null) throw new NullPointerException();
+    final E[] items = this.items;
+    final ReentrantLock lock = this.lock;
+    lock.lockInterruptibly();
+    try {
+        try {
+            while (count == items.length)
+                notFull.await();
+        } catch (InterruptedException ie) {
+            notFull.signal(); // propagate to non-interrupted thread
+            throw ie;
+        }
+        insert(e);
+    } finally {
+        lock.unlock();
+    }
+}
+</code></pre><p>remove 方法：</p>
+<pre><code>public boolean remove(Object o) {
+    if (o == null) return false;
+    final E[] items = this.items;
+    final ReentrantLock lock = this.lock;
+    lock.lock();
+    try {
+        int i = takeIndex;
+        int k = 0;
+        for (;;) {
+            if (k++ &gt;= count)
+                return false;
+            if (o.equals(items[i])) {
+                removeAt(i);
+                return true;
+            }
+            i = inc(i);
+        }
+
+    } finally {
+        lock.unlock();
+    }
+}
+
+void removeAt(int i) {
+    final E[] items = this.items;
+    // if removing front item, just advance
+    if (i == takeIndex) {
+        items[takeIndex] = null;
+        takeIndex = inc(takeIndex);
+    } else {
+        // slide over all others up through putIndex.
+        for (;;) {
+            int nexti = inc(i);
+            if (nexti != putIndex) {
+                items[i] = items[nexti];
+                i = nexti;
+            } else {
+                items[i] = null;
+                putIndex = i;
+                break;
+            }
+        }
+    }
+    --count;
+    notFull.signal();
+}
+</code></pre><p>poll 方法：</p>
+<pre><code>public E poll() {
+    final ReentrantLock lock = this.lock;
+    lock.lock();
+    try {
+        if (count == 0)
+            return null;
+        E x = extract();
+        return x;
+    } finally {
+        lock.unlock();
+    }
+}
+
+private E extract() {
+    final E[] items = this.items;
+    E x = items[takeIndex];
+    items[takeIndex] = null;
+    takeIndex = inc(takeIndex);
+    --count;
+    notFull.signal();
+    return x;
+}
+</code></pre><p>take 方法：</p>
+<pre><code> public E take() throws InterruptedException {
+    final ReentrantLock lock = this.lock;
+    lock.lockInterruptibly();
+    try {
+        try {
+            while (count == 0)
+                notEmpty.await();
+        } catch (InterruptedException ie) {
+            notEmpty.signal(); // propagate to non-interrupted thread
+            throw ie;
+        }
+        E x = extract();
+        return x;
+    } finally {
+        lock.unlock();
+    }
+}
+</code></pre><p>peek 方法：</p>
+<pre><code>public E peek() {
+    final ReentrantLock lock = this.lock;
+    lock.lock();
+    try {
+        return (count == 0) ? null : items[takeIndex];
+    } finally {
+        lock.unlock();
+    }
+}
+</code></pre><p>size 方法：</p>
+<pre><code>public int size() {
+    final ReentrantLock lock = this.lock;
+    lock.lock();
+    try {
+        return count;
+    } finally {
+        lock.unlock();
+    }
+}
+</code></pre><h3 id="LinkedBlockingQueue"><a href="#LinkedBlockingQueue" class="headerlink" title="LinkedBlockingQueue"></a>LinkedBlockingQueue</h3><p>一个基于基于链表的、任选范围的阻塞双端队列。</p>
+<p>可选的容量范围构造方法参数是一种防止过度膨胀的方式。如果未指定容量，那么容量将等于 Integer.MAX_VALUE。</p>
+<p>只要插入元素不会使双端队列超出容量，每次插入后都将动态地创建链接节点。</p>
+<p>LinkedBlockingQueue之所以能够高效的处理并发数据，还因为其对于生产者端和消费者端分别采用了独立的锁来控制数据同步，这也意味着在高并发的情况下生产者和消费者可以并行地操作队列中的数据，以此来提高整个队列的并发性能。</p>
+<pre><code>public class LinkedBlockingQueue&lt;E&gt; extends AbstractQueue&lt;E&gt;
+    implements BlockingQueue&lt;E&gt;, java.io.Serializable {
+    /**
+     * Linked list node class
+     */
+    static class Node&lt;E&gt; {
+        /** The item, volatile to ensure barrier separating write and read */
+        volatile E item;
+        Node&lt;E&gt; next;
+            Node(E x) { item = x; }
+    }
+    /** The capacity bound, or Integer.MAX_VALUE if none */
+    private final int capacity;
+
+    /** Current number of elements */
+    private final AtomicInteger count = new AtomicInteger(0);
+
+    /** Head of linked list */
+    private transient Node&lt;E&gt; head;
+
+    /** Tail of linked list */
+    private transient Node&lt;E&gt; last;
+
+    /** Lock held by take, poll, etc */
+    private final ReentrantLock takeLock = new ReentrantLock();
+
+    /** Wait queue for waiting takes */
+    private final Condition notEmpty = takeLock.newCondition();
+
+    /** Lock held by put, offer, etc */
+    private final ReentrantLock putLock = new ReentrantLock();
+
+    /** Wait queue for waiting puts */
+    private final Condition notFull = putLock.newCondition();
+    ...
+
+}
+</code></pre><p>构造函数的三种重载方式：</p>
+<pre><code>public LinkedBlockingQueue() {
+    this(Integer.MAX_VALUE); //默认大小为 Integer.MAX_VALUE
+}
+
+public LinkedBlockingQueue(int capacity) {
+    if (capacity &lt;= 0) throw new IllegalArgumentException();
+    this.capacity = capacity;
+    last = head = new Node&lt;E&gt;(null);
+}
+
+public LinkedBlockingQueue(Collection&lt;? extends E&gt; c) { //用集合来构造队列
+    this(Integer.MAX_VALUE);
+    for (E e : c)
+        add(e);
+}
+</code></pre><p>put 方法：</p>
+<pre><code>public void put(E e) throws InterruptedException {
+    if (e == null) throw new NullPointerException();
+    // Note: convention in all put/take/etc is to preset
+    // local var holding count  negative to indicate failure unless set.
+    int c = -1;
+    final ReentrantLock putLock = this.putLock;
+    final AtomicInteger count = this.count;
+    putLock.lockInterruptibly();
+    try {
+        /*
+         * Note that count is used in wait guard even though it is
+         * not protected by lock. This works because count can
+         * only decrease at this point (all other puts are shut
+         * out by lock), and we (or some other waiting put) are
+         * signalled if it ever changes from
+         * capacity. Similarly for all other uses of count in
+         * other wait guards.
+         */
+        try {
+            while (count.get() == capacity)
+                notFull.await();
+        } catch (InterruptedException ie) {
+            notFull.signal(); // propagate to a non-interrupted thread
+            throw ie;
+        }
+        insert(e);
+        c = count.getAndIncrement();
+        if (c + 1 &lt; capacity)
+            notFull.signal();
+    } finally {
+        putLock.unlock();
+    }
+    if (c == 0)
+        signalNotEmpty();
+}
+</code></pre><p>offer 方法：</p>
+<pre><code> public boolean offer(E e, long timeout, TimeUnit unit)
+    throws InterruptedException {
+
+    if (e == null) throw new NullPointerException();
+    long nanos = unit.toNanos(timeout);
+    int c = -1;
+    final ReentrantLock putLock = this.putLock;
+    final AtomicInteger count = this.count;
+    putLock.lockInterruptibly();
+    try {
+        for (;;) {
+            if (count.get() &lt; capacity) {
+                insert(e);
+                c = count.getAndIncrement();
+                if (c + 1 &lt; capacity)
+                    notFull.signal();
+                break;
+            }
+            if (nanos &lt;= 0)
+                return false;
+            try {
+                nanos = notFull.awaitNanos(nanos);
+            } catch (InterruptedException ie) {
+                notFull.signal(); // propagate to a non-interrupted thread
+                throw ie;
+            }
+        }
+    } finally {
+        putLock.unlock();
+    }
+    if (c == 0)
+        signalNotEmpty();
+    return true;
+}
+</code></pre><p>上面两个方法都调用了一个相同的方法：insert。</p>
+<pre><code>private void insert(E x) {
+    last = last.next = new Node&lt;E&gt;(x);//插入到队尾，这个连等用得非常漂亮
+}
+</code></pre><p>take 方法：</p>
+<pre><code>public E take() throws InterruptedException {
+    E x;
+    int c = -1;
+    final AtomicInteger count = this.count;
+    final ReentrantLock takeLock = this.takeLock;
+    takeLock.lockInterruptibly();
+    try {
+        try {
+            while (count.get() == 0)
+                notEmpty.await();
+        } catch (InterruptedException ie) {
+            notEmpty.signal(); // propagate to a non-interrupted thread
+            throw ie;
+        }
+
+        x = extract();
+        c = count.getAndDecrement();
+        if (c &gt; 1)
+            notEmpty.signal();
+    } finally {
+        takeLock.unlock();
+    }
+    if (c == capacity)
+        signalNotFull();
+    return x;
+}
+</code></pre><p>poll 方法：</p>
+<pre><code> public E poll() {
+    final AtomicInteger count = this.count;
+    if (count.get() == 0)
+        return null;
+    E x = null;
+    int c = -1;
+    final ReentrantLock takeLock = this.takeLock;
+    takeLock.lock();
+    try {
+        if (count.get() &gt; 0) {
+            x = extract();
+            c = count.getAndDecrement();
+            if (c &gt; 1)
+                notEmpty.signal();
+        }
+    } finally {
+        takeLock.unlock();
+    }
+    if (c == capacity)
+        signalNotFull();
+    return x;
+}
+</code></pre><p>上面两种方法共同调用了一个extract 方法：</p>
+<pre><code> private E extract() {
+    Node&lt;E&gt; first = head.next;
+    head = first;
+    E x = first.item;
+    first.item = null;
+    return x;
+}
+</code></pre><p>peek 方法：</p>
+<pre><code>public E peek() {
+    if (count.get() == 0)
+        return null;
+    final ReentrantLock takeLock = this.takeLock;
+    takeLock.lock();
+    try {
+        Node&lt;E&gt; first = head.next;
+        if (first == null)
+            return null;
+        else
+            return first.item;
+    } finally {
+        takeLock.unlock();
+    }
+}
+</code></pre><p>remove 方法</p>
+<pre><code>public boolean remove(Object o) {
+    if (o == null) return false;
+    boolean removed = false;
+    fullyLock();
+    try {
+        Node&lt;E&gt; trail = head;
+        Node&lt;E&gt; p = head.next;
+        while (p != null) {
+            if (o.equals(p.item)) {
+                removed = true;
+                break;
+            }
+            trail = p;
+            p = p.next;
+        }
+        if (removed) {
+            p.item = null;
+            trail.next = p.next;
+            if (last == p)
+                last = trail;
+            if (count.getAndDecrement() == capacity)
+                notFull.signalAll();
+        }
+    } finally {
+        fullyUnlock();
+    }
+    return removed;
+}
+</code></pre></div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2015/08/19/ThreadPool-之学习/" title="ThreadPool 之学习" class="prev">PREV</a><a href="/2015/08/17/java-util-concurrent-locks-包/" title="java.util.concurrent.locks 包" class="next">NEXT</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

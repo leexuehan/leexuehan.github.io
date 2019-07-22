@@ -1,0 +1,202 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.8.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> 判断数组是否是二叉搜索树的后序遍历序列 · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="判断数组是否是二叉搜索树的后序遍历序列 - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">判断数组是否是二叉搜索树的后序遍历序列</h1><div class="post-info">2015-07-17<p class="visit"><i data-identity="2015/07/17/判断数组是否是二叉搜索树的后序遍历序列/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><h2 id="剑指offer面试题系列"><a href="#剑指offer面试题系列" class="headerlink" title="剑指offer面试题系列"></a>剑指offer面试题系列</h2><blockquote>
+<p>题目：输入一个整数数组，判断该数组是不是某二叉搜索树的后序遍历结果。如果是返回true，否则返回false。假设输入的数组的任意两个数字都不相同。</p>
+</blockquote>
+<h3 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h3><p>拿到本题时，其实很快就想出了思路，就是在实现的过程中有几个细节问题没有注意到，导致调试了半天。这个在后面的备注里会提到。先说思路：</p>
+<p>由于是后序遍历二叉树产生的序列，因为后序遍历的特点是最后遍历根节点，所以自然数组的<strong>最后一个元素就是根节点了。</strong>又因为是二叉排序树，所以根节点的左子树的全部元素是小于根节点的，相应的右子树全部大于根节点。根据这个性质，可以很容易在数组中划分出来哪部分是左子树，哪部分是右子树。只要从数组的第一个元素开始遍历，直到遍历到大于这个根节点的元素为止，前面的是左子树，后面的自然就是右子树了。</p>
+<p>依次类推，使用递归可以实现之。</p>
+<h3 id="代码"><a href="#代码" class="headerlink" title="代码"></a>代码</h3><pre><code>    package com.tree;
+
+/*判断输入数组是否是二叉搜索树的后序遍历序列
+ * */
+public class BinaryTreeEx {
+    private static int[] arr1 = { 1, 2, 4, 3, 7, 9, 6, 8 };
+    private static int[] arr2 = { 1, 3, 2 };
+    private static int[] arr3 = { 3, 2, 5, 6, 4 };
+    private static int[] arr = { 3, 2, 4, 1 };
+
+    public static boolean isPostOrderSeq(int[] arr, int start, int end) {
+        boolean flag = true;
+        if (start &gt;= end) { //先判断输入是否合适
+            return flag;
+        }
+        int root = arr[end];
+        int i = start;  //i从start开始遍历
+        int pos = 0;
+        while (i &lt; arr.length &amp;&amp; arr[i] &lt; root)
+            i++;
+        pos = i;
+        int right_len = end - pos;//左子树长度
+        int left_len = pos - start;//右子树长度
+
+        if (left_len &gt; 0) {
+            for (int k = start; k &lt; left_len; k++) {
+                if (arr[k] &gt; root) {
+                    flag = false;
+                    break;
+                }
+            }
+
+        }
+
+        if (flag &amp;&amp; right_len &gt; 0) {
+            for (int k = pos; k &lt; end; k++) {
+                if (arr[k] &lt; root) {
+                    flag = false;
+                    break;
+                }
+            }
+
+        }
+
+        if (flag)
+            flag = isPostOrderSeq(arr, start, pos - 1);
+        if (flag)
+            flag = isPostOrderSeq(arr, pos, end - 1);
+        return flag;
+    }
+
+    public static void main(String[] args) {
+        if (isPostOrderSeq(arr, 0, arr.length - 1))
+            System.out.println(&quot;该序列是后序遍历序列&quot;);
+        else
+            System.out.println(&quot;该序列不是后序遍历序列&quot;);
+    }
+}
+</code></pre><h3 id="备注"><a href="#备注" class="headerlink" title="备注"></a>备注</h3><p>有两个地方需要注意：</p>
+<p>第一，是每次递归划分左右子树的变量 i 的起点，因为每次将 i=0，在调试时费了不少功夫；而计算左右子树的表达式也要注意；</p>
+<p>第二，在递归右子树时，记得输入参数的时候将 end 变量减去 1，因为每次都把最后一个结点踢出来了。</p>
+<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><p>前面很多题是思路没有想清楚，实现没啥问题；这个题是思路没有想清楚，实现的细节上费了很大功夫。以后做题，思路先要想清楚，然后在细节上，特别是一些变量的设置上要注意。</p>
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2015/07/17/打印二叉树中等于某一个整数所有路径/" title="打印二叉树中等于某一个整数所有路径" class="prev">PREV</a><a href="/2015/07/17/层序遍历二叉树/" title="层序遍历二叉树" class="next">NEXT</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>
