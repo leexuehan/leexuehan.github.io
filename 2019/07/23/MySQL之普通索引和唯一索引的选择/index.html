@@ -1,0 +1,242 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.8.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> MySQL之普通索引和唯一索引的选择 · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="MySQL之普通索引和唯一索引的选择 - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">MySQL之普通索引和唯一索引的选择</h1><div class="post-info">2019-07-23<p class="visit"><i data-identity="2019/07/23/MySQL之普通索引和唯一索引的选择/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><p><a href="[https://leexuehan.github.io/2019/07/20/MySQL-%E7%B4%A2%E5%BC%95/](https://leexuehan.github.io/2019/07/20/MySQL-索引/">MySQL索引</a>)这篇文章讲了一些基础的索引知识，我们了解到了索引是什么，能做什么并在适当时候做一些优化。</p>
+<p>这篇文章谈的其实也是优化MySQL的索引，但是只局限于比较普通索引和唯一索引。</p>
+<a id="more"></a>
+<h2 id="引子"><a href="#引子" class="headerlink" title="引子"></a>引子</h2><p>假设有一个市民系统，每个人都有唯一的身份证号，假设业务代码能够保证不会有身份证号重复的数据录入。</p>
+<p>现在要根据身份证号（id_card）查询姓名。</p>
+<p>当然，从<a href="[https://leexuehan.github.io/2019/07/20/MySQL-%E7%B4%A2%E5%BC%95/](https://leexuehan.github.io/2019/07/20/MySQL-索引/">MySQL索引</a>)这篇文章我们了解到一些必要的优化：身份证号（id_card）作为主键会使得二级索引的叶节点变大，浪费存储空间。</p>
+<p>所以，一般不建议使用身份证号作为主键，而是要选择一个自增的非业务id作为主键。</p>
+<p>确定了主键之后，我们现在要提高一下查询效率，首先想到的就是：添加索引。</p>
+<p>在什么字段上加索引呢？</p>
+<p>因为要根据身份证号查询姓名，所以首先想到的肯定是 id_card 字段加索引。</p>
+<p>那么加普通索引呢？还是加唯一索引？</p>
+<p>我们以 InnoDB 存储引擎为例从两方面的性能对此二者进行比较分析。</p>
+<h2 id="查询性能"><a href="#查询性能" class="headerlink" title="查询性能"></a>查询性能</h2><p>假设查询语句为</p>
+<blockquote>
+<p>select id from cuser where id_card=XXXXX</p>
+</blockquote>
+<p>因为索引的结构是一棵 B+ 树，所以需要从根节点开始遍历，按层搜索叶子节点。</p>
+<ol>
+<li><p>普通索引不保证索引唯一，所以遍历到 id_card=XXXXX之后，还是要继续往后走，看后面是否还有相同 id_card 的数据节点。</p>
+</li>
+<li><p>对于唯一索引，则遍历到 id_card=XXXXX 的节点之后就不继续往前走了。</p>
+</li>
+</ol>
+<p>看起来普通索引会比唯一索引有可能多遍历几次（如果重复节点多）。</p>
+<p>多遍历的那几次带来的性能影响有多大呢？</p>
+<p>我们先了解下 InnoDB 存储引擎的数据加载方式。</p>
+<p><div align="center"><img src="./load_process.png" alt="InnoDb存储引擎的加载方式"></div></p>
+<p>我们了解到：存储引擎是以 Page 为单位进行加载的，Page 默认大小为 16KB。每个 Page 可能会容纳几千条 key。</p>
+<p>所以如果我们在内存中找到了 id_card，则代表着它所在的 Page 也一起加载进来了。</p>
+<p>回头再看看使用普通索引的情况，如果遍历到  id_card=XXXXX 的数据，则后面如果有重复的 id_card，则很大概率也在这一个Page里。而内存级别的扫描，时间量级为 ns，所以因为多扫描而多出来的时间<strong>微乎其微</strong>。</p>
+<p>结论：<strong>在查询性能方面，普通索引和唯一索引不分伯仲</strong>。</p>
+<h2 id="更新性能"><a href="#更新性能" class="headerlink" title="更新性能"></a>更新性能</h2><p>再看看两类索引在更新方面的性能影响。</p>
+<h3 id="普通索引的更新"><a href="#普通索引的更新" class="headerlink" title="普通索引的更新"></a>普通索引的更新</h3><p>普通索引的更新的过程使用时序图表示如下</p>
+<p><div align="center"><img src="./changebuffer.png" alt="普通索引的更新流程"></div></p>
+<p>从时序图可以看到使用普通索引的更新，实际上只是将更新操作缓存到了 change buffer 里，后面的 merge 操作会将缓存到 buffer 里面的操作施加于原始数据上。</p>
+<p>merge 操作什么时候触发呢？</p>
+<ol>
+<li><p>下次对原始数据的读操作</p>
+<p>这也是防止出现脏数据，既然已经 load 到内存了，那干脆就 merge 操作到数据了。</p>
+</li>
+<li><p>系统后台线程定期 merge</p>
+<p>万一很久都没有读操作，buffer 岂不是越来越大？所以需要系统的后台线程定期 merge。</p>
+</li>
+<li><p>数据库正常关闭的过程</p>
+<p>这个很容易理解，正常关闭，肯定要将未完成的工作执行完。</p>
+</li>
+</ol>
+<p>所以了解了这个过程之后，再来看看，如果我们想插入一个人的数据，会发生什么？</p>
+<p>分两种情况：</p>
+<ol>
+<li><p>数据在内存的数据页中</p>
+<p>找到合适的位置，直接插入这个值，也不用判断有无冲突。</p>
+</li>
+<li><p>数据不在内存的数据页中</p>
+<p>将更新记录在 change buffer 中，返回。是不是很简单？</p>
+</li>
+</ol>
+<h3 id="唯一索引的更新"><a href="#唯一索引的更新" class="headerlink" title="唯一索引的更新"></a>唯一索引的更新</h3><p>唯一索引的更新因为要判断是否有 key 值冲突，所以肯定要将数据页读入内存，以此来判断有无冲突产生，所以也不存在使用 change buffer 这个过程了。</p>
+<p>同样要分两种情况：</p>
+<ol>
+<li><p>数据在内存的数据页中</p>
+<p>找到合适的位置，判断值有无冲突，无则直接插入这个值。</p>
+</li>
+<li><p>数据不在内存的数据页中</p>
+<p>加载数据页到内存中，执行步骤1。</p>
+</li>
+</ol>
+<p>可以看到，对于唯一索引来说，所要更新的数据所在的数据页必须在内存中，这样才能判断是否有冲突，这是不同于普通索引的地方。</p>
+<h3 id="普通索引-vs-唯一索引"><a href="#普通索引-vs-唯一索引" class="headerlink" title="普通索引 vs 唯一索引"></a>普通索引 vs 唯一索引</h3><p>对于数据在内存中的情况，唯一索引需要判断<strong>是否冲突</strong>，对于数据不在内存中的情况，唯一索引要加载数据页到内存，再执行一次判断，之后插入。</p>
+<p>唯一索引在更新数据上，多了判断冲突，还有可能多磁盘<strong>随机读写</strong>操作，而后者往往才是最要命的。</p>
+<p>结论：<strong>在更新数据上，普通索引的性能会高于唯一索引。（这就是保证唯一性的代价）</strong></p>
+<h3 id="Change-Buffer-的使用场景"><a href="#Change-Buffer-的使用场景" class="headerlink" title="Change Buffer 的使用场景"></a>Change Buffer 的使用场景</h3><p>题外话一。</p>
+<p>通过普通索引的更新动作，我们可以知道：这种记录缓存操作的方式最适用于写多读少的场景，这样能够实现内存级别的写入效率，比如账单类、日志类的系统。对于这种场景，<strong>把 change buffer 设置的尽量大一些较好</strong>。</p>
+<p>极端情况下，如果一条记录写入后都马上查询，相当于每次读操作都会多出来一次 merge，这样反而增加了 change buffer 的维护代价。</p>
+<p>所以每一种机制都有其最适用的场景，天生我才必有用。</p>
+<h3 id="选择普通索引-or-唯一索引？"><a href="#选择普通索引-or-唯一索引？" class="headerlink" title="选择普通索引 or 唯一索引？"></a>选择普通索引 or 唯一索引？</h3><p>题外话二。</p>
+<p>为了维护索引的唯一性，势必造成唯一索引的更新效率低，但是这两类索引在查询效率上没有什么明显差别。</p>
+<p>所以一般情况下还是选择普通索引的好。要是索引的唯一性那么重要的话，在业务逻辑上也同样可以保证。</p>
+<h3 id="Change-buffer-vs-Redo-log"><a href="#Change-buffer-vs-Redo-log" class="headerlink" title="Change buffer vs Redo log"></a>Change buffer vs Redo log</h3><p>题外话三。</p>
+<p>这两个概念容易混淆，下面用一个例子来诠释二者的区别。</p>
+<p>我们要在一张表上执行插入语句：</p>
+<blockquote>
+<p>insert into t(id,k) values(id1,k1),(id2,k2)</p>
+</blockquote>
+<p><div align="center"><img src="./changebuffer_redolog.png" alt="changebuffer vs redolog"></div></p>
+<p>图中用红色数字标出了执行步骤。</p>
+<p>图中涉及了四个部分：内存、redo log(ib_log_fileX)、数据表空间(t.ibd)、系统表空间(ibdata1)。</p>
+<ol>
+<li>page1 在内存中，直接更新数据</li>
+<li>page2 不在内存中，就在内存的 change buffer 区域记录了相应操作</li>
+<li>步骤1记录到 redo log 中</li>
+<li>步骤2记录到 redo log 中</li>
+</ol>
+<p>总结来说上面4步，1和2都是内存级操作，3和4是磁盘级操作，但是是顺序写入。图中虚线箭头表示是后台操作，不影响响应。</p>
+<p>如果我们要在一张表上执行读语句：</p>
+<blockquote>
+<p>select * from t where k in (k1,k2)</p>
+</blockquote>
+<p><div align="center"><img src="./changebuffer_read.png" alt="读表"></div></p>
+<p>图中：</p>
+<ol>
+<li>读 page1 的内容，直接从内存返回。</li>
+<li>读 page2 的内容时，需要把 page2 的内容从磁盘加载到内存中，然后应用 change buffer 里面的操作日志，再返回。</li>
+</ol>
+<p>（全文完）</p>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ol>
+<li>丁奇 《MySQL 45 讲》</li>
+</ol>
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2019/07/21/MySQL的锁/" title="MySQL的锁" class="next">NEXT</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

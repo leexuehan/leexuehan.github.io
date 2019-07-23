@@ -1,11 +1,76 @@
 <!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.8.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> MySQL 索引 · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="MySQL 索引 - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
 <script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">MySQL 索引</h1><div class="post-info">2019-07-20<p class="visit"><i data-identity="2019/07/20/MySQL-索引/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><p>从这一篇开始，总结下索引基础。</p>
 <a id="more"></a>
-<h3 id="索引简介"><a href="#索引简介" class="headerlink" title="索引简介"></a>索引简介</h3><p>什么是索引？</p>
+<h2 id="索引简介"><a href="#索引简介" class="headerlink" title="索引简介"></a>索引简介</h2><h3 id="概念"><a href="#概念" class="headerlink" title="概念"></a>概念</h3><p>什么是索引？</p>
+<p>维基百科上的概念：</p>
+<blockquote>
+<p><strong>数据库索引</strong>，是<a href="https://zh.wikipedia.org/wiki/数据库管理系统" target="_blank" rel="noopener">数据库管理系统</a>中一个<strong>排序</strong>的<a href="https://zh.wikipedia.org/wiki/数据结构" target="_blank" rel="noopener">数据结构</a>，以协助快速查询、更新<a href="https://zh.wikipedia.org/wiki/数据库表" target="_blank" rel="noopener">数据库表</a>中数据。</p>
+</blockquote>
 <p>老套的查字典的例子：我们先从部首表里面查出偏旁多少画，然后再查剩下的多少画，最后找到那个字在多少页，然后翻到那一页之后，逐个遍历查找，才最终找到那个字。</p>
 <p>这里索引的作用就很明显了，如果给你一本康熙字典，让你找一个“康”字，你不会一页一页去查吧。</p>
 <p>很明显，索引能够大大提高我们的查找效率和速度。</p>
-<p>三种常见的简单数据结构是：哈希表、有序数组和搜索树。</p>
+<h3 id="类型"><a href="#类型" class="headerlink" title="类型"></a>类型</h3><p>索引主要分为以下几种常见类型：</p>
+<ul>
+<li><p>普通索引</p>
+<p>最基本的索引，没有任何限制。</p>
+<p>创建方式：</p>
+<ol>
+<li><p>直接创建：</p>
+<blockquote>
+<p>CREATE INDEX index_name ON TABLE (column(length)) </p>
+</blockquote>
+</li>
+<li><p>修改表方式创建：</p>
+<blockquote>
+<p>ALTER TABLE table_name ADD INDEX index_name ON (column(length))</p>
+</blockquote>
+</li>
+<li><p>创建表的同时创建：</p>
+<blockquote>
+<p>CREATE TABLE table_name (….. </p>
+<p>​                INDEX index_name (…..)</p>
+<p>)</p>
+</blockquote>
+</li>
+</ol>
+</li>
+<li><p>唯一索引</p>
+<p>类似于普通索引，不同于普通索引的是索引值<strong>必须唯一</strong>，但是允许有空值。</p>
+<p>创建方式：</p>
+<ol>
+<li><p>直接创建：</p>
+<blockquote>
+<p>CREATE UNIQUE INDEX index_name ON TABLE (column(length)) </p>
+</blockquote>
+</li>
+<li><p>修改表方式创建</p>
+<blockquote>
+<p>ALTER TABLE table_name ADD UNIQUE  INDEX index_name ON (column(length))</p>
+</blockquote>
+</li>
+<li><p>创建表的同时创建</p>
+<blockquote>
+<p>CREATE TABLE table_name (….. </p>
+<p>​        UNIQUE  index_name (…..)</p>
+<p>)</p>
+</blockquote>
+</li>
+</ol>
+</li>
+<li><p>全文索引</p>
+<ol>
+<li>MySQL 5.6 以前的版本，只有 MyISAM 存储引擎支持全文索引；</li>
+<li>MySQL 5.6 及以后的版本，MyISAM 和 InnoDB 存储引擎均支持全文索引;</li>
+<li>只有字段的数据类型为 char、varchar、text 及其系列才可以建全文索引。</li>
+</ol>
+<p>全文索引适用于基于相似度查询的场景。</p>
+<p>但是对于大容量的数据来说，生成全文索引是一个非常耗时且消耗硬盘空间的方法。</p>
+</li>
+<li><p>单/多列索引</p>
+</li>
+<li>联合索引</li>
+</ul>
+<h3 id="数据结构"><a href="#数据结构" class="headerlink" title="数据结构"></a>数据结构</h3><p>三种常见的简单数据结构是：哈希表、有序数组和搜索树。</p>
 <h4 id="哈希表"><a href="#哈希表" class="headerlink" title="哈希表"></a>哈希表</h4><p>哈希表存储的数据结构是：key-value对。查找的时候，我们只要输入一个 key 就会返回相应的 value。</p>
 <p>表的底层一般是使用数组+链表或者数组+二叉树的形式来实现，如下图所示：</p>
 <p><div align="center"><img src="./hashtable.png" alt="哈希表结构"></div></p>
@@ -20,7 +85,7 @@
 <p><div align="center"><img src="./binarytree.png" alt="二叉搜索树"></div></p>
 <p>二叉搜索树的<strong>查找</strong>时间复杂度为O(logN)，为了维持这种时间复杂度必须保证该树是<strong>平衡二叉树</strong>。</p>
 <p>二叉搜索树的更新时间复杂度也是O(logN)。</p>
-<h3 id="索引的数据结构"><a href="#索引的数据结构" class="headerlink" title="索引的数据结构"></a>索引的数据结构</h3><h4 id="多叉树"><a href="#多叉树" class="headerlink" title="多叉树"></a>多叉树</h4><p>一颗平衡二叉树的树高为logN，此处N为结点总数，如果N为100w，则树高约为20左右。</p>
+<h4 id="多叉树"><a href="#多叉树" class="headerlink" title="多叉树"></a>多叉树</h4><p>一颗平衡二叉树的树高为logN，此处N为结点总数，如果N为100w，则树高约为20左右。</p>
 <p>在实际的数据库中，索引会存储在磁盘上，而从磁盘上随机读一块数据大约需要 10ms，那么对于有100w的结点的二叉树，则至多可能需要读 200ms。这个速度算是比较慢了。</p>
 <p>所以为了减少随机读磁盘的次数，我们需要想方设法降低树的高度，而降低树高度的方法就是<strong>增加分叉</strong>，变二叉为多叉。</p>
 <p>实际上，InnoDB 存储引擎的索引数据结构就是多叉树，准确的说是一个多叉平衡树：B+树。</p>
@@ -58,7 +123,7 @@
 </ol>
 </li>
 </ol>
-<h4 id="InnoDB-索引模型"><a href="#InnoDB-索引模型" class="headerlink" title="InnoDB 索引模型"></a>InnoDB 索引模型</h4><p>在 InnoDB 存储引擎中，表都是按照主键顺序以<strong>索引</strong>的形式存放的，以这种方式存储的表也叫<strong>索引组织表</strong>。</p>
+<h3 id="InnoDB-索引模型"><a href="#InnoDB-索引模型" class="headerlink" title="InnoDB 索引模型"></a>InnoDB 索引模型</h3><p>在 InnoDB 存储引擎中，表都是按照主键顺序以<strong>索引</strong>的形式存放的，以这种方式存储的表也叫<strong>索引组织表</strong>。</p>
 <p>而其所采用的模型就是B+树，所以<strong>可以说InnoDB里面的所有数据都是存储在一棵B+树中。</strong></p>
 <p>每一个索引都对应一棵B+树。</p>
 <p>举个例子：</p>
@@ -178,7 +243,8 @@
 <p><div align="center"><img src="./pushdown.jpg" alt="有索引下推"></div></p>
 <p>图中每一条虚线箭头都表示要进行回表。</p>
 <p>通过对比我们发现，加了索引下推优化，回表次数明显减少，因为在回表之前，已经对不符合 age 条件的都加以过滤，提升了查询效率。</p>
-<h3 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h3><ol>
+<p>（全文完）</p>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ol>
 <li><p>丁奇《MySQL 45 讲》</p>
 </li>
 <li><p><a href="https://zh.wikipedia.org/wiki/B%2B树" target="_blank" rel="noopener">https://zh.wikipedia.org/wiki/B%2B%E6%A0%91</a></p>
@@ -186,7 +252,6 @@
 <li><p><a href="https://zh.wikipedia.org/wiki/B树#删除" target="_blank" rel="noopener">https://zh.wikipedia.org/wiki/B%E6%A0%91#%E5%88%A0%E9%99%A4</a></p>
 </li>
 </ol>
-<p>（全文完）</p>
 </div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2019/07/21/MySQL的锁/" title="MySQL的锁" class="prev">PREV</a><a href="/2019/07/20/MySQL事务初探/" title="MySQL中的事务" class="next">NEXT</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
     el: "#vcomments",
     appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
