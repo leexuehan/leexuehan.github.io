@@ -3,7 +3,7 @@
 <a id="more"></a>
 <h2 id="表数据存储"><a href="#表数据存储" class="headerlink" title="表数据存储"></a>表数据存储</h2><p>以 InnoDB 存储引擎为例。</p>
 <p>一张表包含两部分：表结构定义和数据。</p>
-<h3 id="表结构"><a href="#表结构" class="headerlink" title="表结构"></a>表结构</h3><p>表结构定义占用空间较小，在 MySQL 8.0 版本以前，表结构存储在以 <code>.frm</code>  为后缀的文件里，在 MySQL 8.0 之后，表结构定义可以存储在数据表中。</p>
+<h3 id="表结构"><a href="#表结构" class="headerlink" title="表结构"></a>表结构</h3><p>表结构定义占用空间<strong>较小</strong>：在 MySQL 8.0 版本以前，表结构存储在以 <code>.frm</code>  为后缀的文件里，在 MySQL 8.0 之后，表结构定义可以存储在数据表中。</p>
 <h3 id="表数据"><a href="#表数据" class="headerlink" title="表数据"></a>表数据</h3><p>表数据的存储分两种：共享表空间和单独的文件。</p>
 <p>这两种存储方式的选择通过设置参数 <code>innodb_file_per_table</code> 进行控制。</p>
 <ul>
@@ -12,12 +12,11 @@
 </ul>
 <p><strong>在 MySQL 5.6.6 版本之后，此参数值默认为 <code>ON</code>。</strong></p>
 <p>删除表自然是使用 <code>drop table</code> 命令。</p>
-<p>对于参数值为 <code>ON</code> 时，因为表数据都放在一个单独的文件中，所有会直接删除该文件；对于参数值为 <code>OFF</code> 时，表数据是放在共享的表空间中，即使表删除了，空间也不会回收。</p>
+<p>对于参数值为 <code>ON</code> 时，因为表数据都放在一个单独的文件中，所以会直接删除该文件；对于参数值为 <code>OFF</code> 时，表数据是放在共享的表空间中，即使表删除了，空间也不会回收。</p>
 <p>如果要删除的不是整张表而是表中的某些行呢？</p>
 <h2 id="行数据如何删除"><a href="#行数据如何删除" class="headerlink" title="行数据如何删除"></a>行数据如何删除</h2><p>InnoDB 中的表数据都是放在一棵 B+ 树中，如图。</p>
-<p><div align="center"><img src="./B+.png" alt="索引结构"></div></p>
-<p>如果想删除 <code>R4</code> 这个记录，InnoDB 引擎只会把 <code>R4</code> 这个记录标记为删除。如果之后，再要插入一个 <code>ID</code> 在 300 和600之间的记录式，可能还会复用这个位置，也就是说<strong>只有满足限定条件的记录，才能够对该位置进行重复利用</strong>。</p>
-<p>而<strong>磁盘大小并不会缩小</strong>。</p>
+<p><div align="center"><img src="./B+.png" alt="索引结构"><br>如果想删除 <code>R4</code> 这个记录，InnoDB 引擎只会把 <code>R4</code> 这个记录<strong>标记为删除</strong>。</div></p>
+<p>如果之后，再要插入一个 <code>ID</code> 在 300 和600之间的记录时，可能还会复用这个位置，也就是说<strong>只有满足限定条件的记录，才能够对该位置进行重复利用</strong>，<strong>磁盘大小并不会缩小</strong>。</p>
 <p>前面的文章我们知道：InnoDB 中的记录都是在存放在 Page 中的。</p>
 <p>以上图为例，如果 PageA 中的记录全被标记为删除会发生什么？</p>
 <p>这个时候整个 PageA 都会标记为可复用，对于<strong>该页中存储的新记录没有限制</strong>。</p>
@@ -30,7 +29,47 @@
 <p><div align="center"><img src="./hole.png" alt="空洞"></div></p>
 <p>由于 PageA 已满，再插入一个 ID 为 550 的记录时，就需要再申请一个新的页面 PageB 保存数据，也就是<strong>页分裂的过程</strong>。</p>
 <p>从图中可以看到：PageA 留下了空洞。</p>
-<h2 id="消除空洞"><a href="#消除空洞" class="headerlink" title="消除空洞"></a>消除空洞</h2><p>（未完。。。）</p>
+<h2 id="消除空洞"><a href="#消除空洞" class="headerlink" title="消除空洞"></a>消除空洞</h2><p>消除空洞的方法还是采用了<strong>标记-复制</strong>的思想。</p>
+<p>假如表<code>A</code>需要做空间收缩，为了把表中的空洞去掉，最简单的办法就是再新建一张大小一样的表<code>B</code>，然后把表<code>A</code>中的数据<strong>按照主键ID递增的顺序</strong>（这样才能保证不会出现空洞），把数据一行一行拷贝到<code>B</code>中。</p>
+<p>这样在<code>B</code>中的索引树一定是紧凑的，因为<strong>不是随机写入的，而是顺序写入的</strong>。</p>
+<p>操作完成之后，将表<code>A</code>用表<code>B</code>替换。</p>
+<p>整个示意图如下：</p>
+<p><div align="center"><img src="./shrink.png" alt="收缩过程"></div></p>
+<ul>
+<li>state1状态下：出现了空洞</li>
+<li>state2 状态下：<code>A</code>表拷贝到<code>B</code>表，<code>B</code>表作为一张临时表。</li>
+<li>state3状态下：<code>A</code>表成为临时表，<code>B</code>表摇身一变成为<code>A</code>表。</li>
+<li>state4状态下：临时表删除，只有新的<code>A</code>表存在。</li>
+</ul>
+<p>我们可以使用如下命令进行表替换：</p>
+<blockquote>
+<p>alter table A engine=InnoDB</p>
+</blockquote>
+<p>那么现在就有一个问题：如果我在拷贝表<code>A</code>的数据到表<code>B</code>的过程中，有新数据插入到表<code>A</code>中怎么办？</p>
+<p>答：低版本的 MySQL 中，此时表<code>A</code>中不能有更新，要给表<code>A</code>上锁；在 MySQL 5.6版本之后，支持一边消除空洞，一边更新数据，即 <strong>Online DDL</strong>。</p>
+<p><div align="center"><img src="./onlineShrink.png" alt="收缩过程"></div></p>
+<p>与非 online 的区别就是：在生成临时表的过程中，如果有的数据插入，可以先把操作记录到一个日志文件（row log）中，旧表数据都拷贝到临时表之后，再将日志文件上的所有操作应用到临时表中。</p>
+<h3 id="锁退化"><a href="#锁退化" class="headerlink" title="锁退化"></a>锁退化</h3><p>alter 语句在启动前要拿到 MDL 写锁。</p>
+<p>为了防止阻塞对数据表的增删改操作，在真正拷贝数据之前，锁<strong>退化为</strong>读锁了。</p>
+<h3 id="Online-vs-Inplace"><a href="#Online-vs-Inplace" class="headerlink" title="Online vs Inplace"></a>Online vs Inplace</h3><p>非 Online DDL 情况下，表 <code>A</code> 中拷贝出来的数据都是放在一张临时表（tmp_table）中，而在 Online DDL 情况下，表 <code>A</code> 中重建出来的数据都是放在临时文件（tmp_file）中。</p>
+<p>这两种操作的区别在于：前者是在 Server 层创建的，而后者是在 InnoDB 存储引擎中创建的，对于 Server 层来说，这就是一个“原地操作”，即 Inplace。</p>
+<p>alter table t engine=InnoDB，语句隐含意思：</p>
+<blockquote>
+<p>alter table t engine=InnoDB,Algorithm=inplace</p>
+</blockquote>
+<p>而如果强制使用拷贝表的方式：</p>
+<blockquote>
+<p>alter table t engine=InnoDB,Algorithm=copy</p>
+</blockquote>
+<p>这样相当于使用非 Online DDL 的方式。</p>
+<p>可以看到：<strong>在重建表的逻辑中， Inplace 的方式就是 Online 。</strong></p>
+<p>但是在某些情况下，二者不同。</p>
+<p>比如如果我要给 InnoDB 表的一个字段加全文索引，如下：</p>
+<blockquote>
+<p>alter table t add FULLTEXT(field_name)</p>
+</blockquote>
+<p>这个操作是 Inplace 的，但是确实非 online 的。</p>
+<p>（全文完）</p>
 <h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ol>
 <li>丁奇 《MySQL 45 讲》</li>
 </ol>
