@@ -55,9 +55,50 @@
 <p>在本方案里，所有的 Consumer 组被划分成为几个子集，每个子集由一个 GroupCoordinator 代理。</p>
 <p>此时就变成了：Consumer 依赖 GroupCoordinator， GroupCoordinator 依赖 zookeeper。</p>
 <p><strong>Consumer 加入或者退出 Group 时，还是会修改 Zookeeper 上保存的元数据，但是此时 zookeeper 只发送通知给 GroupCoordinator，由 GroupCoordinator 进行 Rebalance 操作。</strong></p>
+<p>下面简单图示出来，一个 Consumer 加入一个 Group 的过程：</p>
+<p><div align="center"><img src="./JoinGroup.png" alt="JoinGroup"></div></p>
+<ol>
+<li>Consumer 向 Kafka Broker 集群中的任一节点<strong>获取元数据</strong>请求，请求中包含了自身所在的 GroupId，节点收到请求之后，返回的响应中就包含了 GroupCoordinator  的信息；</li>
+<li>Consumer 向 GroupCoordinator  周期性发送 HeartbeatRequest 请求，目的是告诉 GroupCoordinator 自己正常在线。</li>
+<li>GroupCoordinator 通过在 HeartbeatResponse 中封装 IllegalGeneration 异常告诉 Consumer，发起Rebalance 操作；</li>
+<li>Consumer 向 GroupCoordinator 发送 JoinGroupRequest <strong>加入 Group </strong>。</li>
+<li>GroupCoordinator 根据 zookeeper 存储的元数据信息和请求制定分配方案，并将方案写入 zookeeper 中</li>
+<li>GroupCoordinator 将制定好的分区分配方案写入 JoinGroupResponse 中，返回到 Consumer 。</li>
+<li>Consumer 解析收到的响应中包含的 GroupCoordinator 已经制定好的分区方案，按照分区开始消费</li>
+<li>继续执行步骤 2.</li>
+</ol>
+<p>方案的时序图如下所示：</p>
+<p><div align="center"><img src="./Solution2.png" alt="方案二执行时序图"></div></p>
+<p>但是此方案也有其缺点： 分区策略由服务端的 GroupCoordinator  来制定，一旦需要更改分区策略，就得重启服务器，不太灵活。</p>
+<h3 id="方案三"><a href="#方案三" class="headerlink" title="方案三"></a>方案三</h3><p>针对方案二由服务器端制定分区分配方案这一不灵活的缺陷，方案三改为由 Consumer 端制定分区分配方案。</p>
+<p>大体来说，Consumer 加入一个组总共分为两阶段：JoinGroup 阶段和 Synchronizing Group State 阶段。</p>
+<h4 id="JoinGroup-阶段"><a href="#JoinGroup-阶段" class="headerlink" title="JoinGroup 阶段"></a>JoinGroup 阶段</h4><p>当 Consumer 请求加入组时，它会向 GroupCoordinator  发送 JoinGroup 请求，在该请求中包含了 Consumer 订阅的 Topic。</p>
+<p>收集好全部成员的 JoinGroup 请求之后，GroupCoordinator  会从这些 Consumer 中选择一个担任这个 Group 的 Leader。</p>
+<p>通常情况下：第一个发送 JoinGroup 请求的会自动称为 Group Leader。</p>
+<p>选出来 Leader 之后，GroupCoordinator   会将 Consumer 的全部订阅信息封装到 JoinGroup 响应中，发送给 Group Leader，由 Group Leader 制定分区方案；其它 Consumer 也会收到 JoinGroup 响应，但是响应中没有订阅信息。</p>
+<p>此时进入下一个阶段。</p>
+<h4 id="Synchronizing-Group-State-阶段"><a href="#Synchronizing-Group-State-阶段" class="headerlink" title="Synchronizing Group State 阶段"></a>Synchronizing Group State 阶段</h4><p>在此阶段，Group Leader 向 GroupCoordinator 发送 SyncGroup 请求，请求中封装了制定好的分区方案；而其他 Consumer 发送的 SyncGroup 请求中并没有实际内容。</p>
+<p>当 Group 内所有成员都成功接收到分配方案后，Consumer 即开始正常消费消息。</p>
+<h4 id="典型场景"><a href="#典型场景" class="headerlink" title="典型场景"></a>典型场景</h4><p>下面从 Broker 端的角度开始分析几个主要的场景的流程：</p>
+<p>场景一：新成员入组</p>
+<p>组处于 stable 状态时，如果有新成员加入。</p>
+<p><div align="center"><img src="./member_add.png" alt="新成员加入"></div></p>
+<p>场景二：组成员主动离组</p>
+<p>Consumer 实例所在的进程或者线程调用 close 方法主动通知 GroupCoordinator 它要退出。</p>
+<p><div align="center"><img src="./member_leave.png" alt="主动离组"></div></p>
+<p>场景三：组成员崩溃离组</p>
+<p>Consumer 实例发生了严重故障，突然宕机导致离组。此时 GroupCoordinator 需要等待超时才能感知。</p>
+<p><div align="center"><img src="./member_crush.png" alt="崩溃离组"></div></p>
+<p>场景四：重平衡时协调者对组内成员提交位移的处理。</p>
+<p>每个组内成员都会定期汇报位移给 GroupCoordinator ，当 Rebalance 开启时，GroupCoordinator 会给予成员一段缓冲时间，要求每个成员必须在这段时间快速上报自己的位移信息，然后开启正常 JoinGroup/SyncGroup 请求发送。</p>
+<p><div align="center"><img src="./offset_commit.png" alt="提交位移"></div></p>
+<h4 id="如何找到-GroupCoordinator"><a href="#如何找到-GroupCoordinator" class="headerlink" title="如何找到 GroupCoordinator"></a>如何找到 GroupCoordinator</h4><p>方案三中 Consumer 不再需要从 Broker 节点中获取 GroupCoordinator 所在的位置信息。每个 Consumer Group 都有其对应的 GroupCoordinator，但具体是由哪个 GroupCoordinator 负责与 group.id 的 hash 值有关，通过这个 <strong>abs(GroupId.hashCode()) % NumPartitions</strong> 来计算出一个值（其中，NumPartitions 是 <code>__consumer_offsets</code> 的 partition 数，默认是50个），这个值代表了 <code>__consumer_offsets</code> 的一个 partition，而这个 partition 的 leader 即为这个 Group 要交互的 GroupCoordinator 所在的节点。</p>
+<h2 id="Rebalance-缺点"><a href="#Rebalance-缺点" class="headerlink" title="Rebalance 缺点"></a>Rebalance 缺点</h2><p>Rebalance 的缺点就在于消费者组内实例数多的情况下，会造成一次 Rebalance 比较耗时。而且 Rebalance 时，所有的 Consumer 需要放下正在进行的消费工作，等待分配方案分配完成。</p>
+<p>所以针对此，最好的优化就是：尽量避免 Rebalance 的发生。</p>
 <p>（全文完）</p>
 <h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ol>
 <li>《Apache Kafka 源码剖析》徐郡明</li>
+<li>《Kafka核心技术与实战》胡夕</li>
 <li><a href="https://www.iteblog.com/archives/2209.html" target="_blank" rel="noopener">https://www.iteblog.com/archives/2209.html</a></li>
 </ol>
 </div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2019/08/03/Netty之异步机制/" title="Netty之异步机制" class="next">NEXT</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
