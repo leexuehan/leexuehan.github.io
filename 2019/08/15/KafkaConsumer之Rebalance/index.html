@@ -32,6 +32,7 @@
 <p>这就涉及到了 Rebalance 机制。</p>
 <h2 id="Rebalance-机制"><a href="#Rebalance-机制" class="headerlink" title="Rebalance 机制"></a>Rebalance 机制</h2><p>关于 Rebalance 机制，Kafka 的设计先后经历了三种方案。</p>
 <h3 id="方案一"><a href="#方案一" class="headerlink" title="方案一"></a>方案一</h3><p>方案一是采用在 zookeeper 上添加 Watcher 来实现的，如图。</p>
+<p><div align="center"><img src="./zookeeper.png" alt="zookeeper"></div></p>
 <ul>
 <li>/brokers/ids/broker 记录了host、port 以及在此 broker 上的 topic 分区列表</li>
 <li>/broker/topics/[topic_name] 记录了每个Partition的Leader和 ISR 信息</li>
@@ -59,7 +60,7 @@
 <li>《Apache Kafka 源码剖析》徐郡明</li>
 <li><a href="https://www.iteblog.com/archives/2209.html" target="_blank" rel="noopener">https://www.iteblog.com/archives/2209.html</a></li>
 </ol>
-</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2019/08/03/Netty之异步机制/" title="Netty之异步机制" class="next">下一篇</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2019/08/03/Netty之异步机制/" title="Netty之异步机制" class="next">NEXT</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
     el: "#vcomments",
     appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
     appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
