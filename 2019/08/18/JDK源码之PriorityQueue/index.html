@@ -1,0 +1,193 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.8.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> JDK源码之PriorityQueue · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="JDK源码之PriorityQueue - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">JDK源码之PriorityQueue</h1><div class="post-info">2019-08-18<p class="visit"><i data-identity="2019/08/18/JDK源码之PriorityQueue/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><h1 id="JDK源码之PriorityQueue实现"><a href="#JDK源码之PriorityQueue实现" class="headerlink" title="JDK源码之PriorityQueue实现"></a>JDK源码之PriorityQueue实现</h1><p>探讨下 JDK 中关于优先级队列的实现。</p>
+<h2 id="堆排序"><a href="#堆排序" class="headerlink" title="堆排序"></a>堆排序</h2><p>堆，或者二叉堆，是一个数组，可以被看成一个近似的完全二叉树，树上的每一个节点对应数组中的一个元素。</p>
+<p>如下图所示是一棵树和数组之间的对应关系。</p>
+<p><div align="center"><img src="./heap_tree.png" alt="堆与数组"></div></p>
+<p>观察图中关系，我们可以知道树中的一个结点下标 <code>i</code> 和它的父结点、左孩子和右孩子的下标对应关系。<br>$$<br>PARENT(i)=i/2(向下取整)<br>$$</p>
+<p>$$<br>LEFT(i)=2*i<br>$$</p>
+<p>$$<br>RIGHT(i)=2*i+1<br>$$</p>
+<p>二叉堆分为最大堆和最小堆。</p>
+<p>最大堆满足性质：<br>$$<br>A[PARENT(i)]≥A[i]<br>$$<br>最小堆满足性质：<br>$$<br>A[PARENT(i)]≤A[i]<br>$$<br>这里我们以最大堆为例，介绍堆排序算法的思路。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">MAX-HEAPIFY（A,i）</span><br><span class="line">	l=LEFT(i)</span><br><span class="line">	r=RIGHT(i)</span><br><span class="line">	if l &lt;= A.heap-size and A[l]&gt;A[i]</span><br><span class="line">		largest=l;</span><br><span class="line">	if r&lt;= A.heap-size and A[r]&gt;A[i]</span><br><span class="line">		largest=r;</span><br><span class="line">	if largest != i</span><br><span class="line">		exchange A[i] with A[largest]</span><br><span class="line">		MAX-HEAPIFY(A,largest)</span><br></pre></td></tr></table></figure>
+<p>上面的伪代码是一个子过程，该过程的作用就是<strong>维护最大堆</strong>。</p>
+<p>采用的思路是“逐级下沉”的方式，从下标 i 开始调整，如果 <code>i</code> 以及其左右孩子节点都满足最大堆，则不进行下一步，否则调换使得 <code>i</code> 处的节点最大，然后递归调整其子节点。</p>
+<p>在伪代码中，A 数组的下标是从 <code>1</code> 开始的，而且 A.heap-size 与 A.length 要注意区分。下同。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">BUILD-MAX-HEAP(A)</span><br><span class="line">	A.heap-size=A.length</span><br><span class="line">	for i = [A.length/2](向下取整) downto 1</span><br><span class="line">		MAX-HEAPIFY(A,i)</span><br></pre></td></tr></table></figure>
+<p>这个子过程的作用是利用数组创建一个最大堆。</p>
+<p>这个过程采用的思路是“自顶向上”的方式。从<strong>最后一个有孩子节点的节点</strong>开始向上调整，维护最大堆的性质。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">HEAPSORT(A)</span><br><span class="line">	BUILD-MAX-HEAP(A)</span><br><span class="line">	for i=A.length downto 2</span><br><span class="line">		exchange A[1] with A[i]</span><br><span class="line">		A.heap-size=A.heap-size-1</span><br><span class="line">		MAX-HEAPIFY(A,1)</span><br></pre></td></tr></table></figure>
+<p>上述子过程结合了前面的两个子过程，开始真正排序。</p>
+<p>该过程也是采取自底向上的方式。先把数组的第一个元素放到最后（第一个元素在堆顶，故一定是最大的），然后开始调整（注意：此时要减小堆的长度，因为最后一个元素已经不参与排序）。以此类推。</p>
+<p>示意图如下：</p>
+<p><div align="center"><img src="./heap_sort.png" alt="堆排序过程"></div></p>
+<p>现在开始估计复杂度。</p>
+<p>MAX-HEAPIFY 最大时间为 O(lgN)。HEAP-SORT 子过程需要调用 n 次 MAX-HEAPIFY 子过程，所以时间复杂度为 O(NlogN).</p>
+<h2 id="优先级队列"><a href="#优先级队列" class="headerlink" title="优先级队列"></a>优先级队列</h2><p>有了以上基础，我们可以接下来看看JDK中优先级队列的实现。</p>
+<p>官方对优先级队列给出的介绍大概如下：</p>
+<ol>
+<li>基于优先级堆的无界队列</li>
+<li>队列元素的是根据它们的自然顺序或者在构造队列时传入的 Comparator 比较器进行排序的。</li>
+<li>不允许 null 元素。</li>
+<li>最小堆</li>
+</ol>
+<p>现在我们来看看，这个类的一些关键代码。</p>
+<p>优先级队列的底层是使用一个对象数组来实现的。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">transient Object[] queue;</span><br></pre></td></tr></table></figure>
+<h3 id="插入元素"><a href="#插入元素" class="headerlink" title="插入元素"></a>插入元素</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">public boolean offer(E e) &#123;</span><br><span class="line">        if (e == null)</span><br><span class="line">            throw new NullPointerException();</span><br><span class="line">        modCount++;</span><br><span class="line">        int i = size;</span><br><span class="line">        //扩容</span><br><span class="line">        if (i &gt;= queue.length)</span><br><span class="line">            grow(i + 1);</span><br><span class="line">        size = i + 1;</span><br><span class="line">        //空队列</span><br><span class="line">        if (i == 0)</span><br><span class="line">            queue[0] = e;</span><br><span class="line">        //非空队列，从队尾插入</span><br><span class="line">        else</span><br><span class="line">            siftUp(i, e);</span><br><span class="line">        return true;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<p>很显然，核心代码在 siftUp 中，最终调用到了  siftUpComparable 或者 siftUpUsingComparator 方法，其核心思路是一样的，只不过使用的比较器不同。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">private void siftUpComparable(int k, E x) &#123;</span><br><span class="line">        Comparable&lt;? super E&gt; key = (Comparable&lt;? super E&gt;) x;</span><br><span class="line">        while (k &gt; 0) &#123;</span><br><span class="line">            int parent = (k - 1) &gt;&gt;&gt; 1;</span><br><span class="line">            Object e = queue[parent];</span><br><span class="line">            if (key.compareTo((E) e) &gt;= 0)</span><br><span class="line">                break;</span><br><span class="line">            queue[k] = e;</span><br><span class="line">            k = parent;</span><br><span class="line">        &#125;</span><br><span class="line">        queue[k] = key;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<p>从上面代码中我们可以看到，首先维护最小堆的方式<strong>不是递归方式</strong>。而是采用了更改新元素 <code>k</code> 的位置，自底向上，逐级比较，如果满足最小堆性质，则直接插入到该位置，结束，如果不满足，则继续往上走，直到满足条件为止。</p>
+<h3 id="删除元素"><a href="#删除元素" class="headerlink" title="删除元素"></a>删除元素</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">public E poll() &#123;</span><br><span class="line">        if (size == 0)</span><br><span class="line">            return null;</span><br><span class="line">        int s = --size;</span><br><span class="line">        modCount++;</span><br><span class="line">        E result = (E) queue[0];</span><br><span class="line">        E x = (E) queue[s];</span><br><span class="line">        queue[s] = null;</span><br><span class="line">        if (s != 0)</span><br><span class="line">            siftDown(0, x);</span><br><span class="line">        return result;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<p>直接取得 queue 的第一个元素，将队尾元素赋给 <code>x</code>，然后开始调用 siftDown 进行最小堆调整。</p>
+<p>同样的，该方法最终调用了 siftDownComparable 方法。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">private void siftDownComparable(int k, E x) &#123;</span><br><span class="line">        Comparable&lt;? super E&gt; key = (Comparable&lt;? super E&gt;)x;</span><br><span class="line">        int half = size &gt;&gt;&gt; 1;        // loop while a non-leaf</span><br><span class="line">        while (k &lt; half) &#123;</span><br><span class="line">            int child = (k &lt;&lt; 1) + 1; // assume left child is least</span><br><span class="line">            Object c = queue[child];</span><br><span class="line">            int right = child + 1;</span><br><span class="line">            if (right &lt; size &amp;&amp;</span><br><span class="line">                ((Comparable&lt;? super E&gt;) c).compareTo((E) queue[right]) &gt; 0)</span><br><span class="line">                c = queue[child = right];</span><br><span class="line">            if (key.compareTo((E) c) &lt;= 0)</span><br><span class="line">                break;</span><br><span class="line">            queue[k] = c;</span><br><span class="line">            k = child;</span><br><span class="line">        &#125;</span><br><span class="line">        queue[k] = key;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<p>这回是采用“逐级下沉”的方式进行调整。</p>
+<p>在位置 k 处插入元素 x，比较 k 处节点与其左右孩子的大小，如果满足最小堆的性质，则直接插入即可，否则更新 k 的值，继续进行比较。</p>
+<h3 id="建堆"><a href="#建堆" class="headerlink" title="建堆"></a>建堆</h3><p>PriorityQueue 可以根据三种集合建堆：</p>
+<ol>
+<li>排序集合</li>
+<li>优先级队列</li>
+<li>普通集合</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">public PriorityQueue(Collection&lt;? extends E&gt; c) &#123;</span><br><span class="line">        if (c instanceof SortedSet&lt;?&gt;) &#123;</span><br><span class="line">            SortedSet&lt;? extends E&gt; ss = (SortedSet&lt;? extends E&gt;) c;</span><br><span class="line">            this.comparator = (Comparator&lt;? super E&gt;) ss.comparator();</span><br><span class="line">            initElementsFromCollection(ss);</span><br><span class="line">        &#125;</span><br><span class="line">        else if (c instanceof PriorityQueue&lt;?&gt;) &#123;</span><br><span class="line">            PriorityQueue&lt;? extends E&gt; pq = (PriorityQueue&lt;? extends E&gt;) c;</span><br><span class="line">            this.comparator = (Comparator&lt;? super E&gt;) pq.comparator();</span><br><span class="line">            initFromPriorityQueue(pq);</span><br><span class="line">        &#125;</span><br><span class="line">        else &#123;</span><br><span class="line">            this.comparator = null;</span><br><span class="line">            initFromCollection(c);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<p>针对情况1、2：已经是有序集合，所以直接拷贝到queue中；</p>
+<p>针对情况3：普通的无序集合。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">private void initFromCollection(Collection&lt;? extends E&gt; c) &#123;</span><br><span class="line">        initElementsFromCollection(c);</span><br><span class="line">        heapify();</span><br><span class="line">&#125;</span><br><span class="line">private void heapify() &#123;</span><br><span class="line">        for (int i = (size &gt;&gt;&gt; 1) - 1; i &gt;= 0; i--)</span><br><span class="line">            siftDown(i, (E) queue[i]);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这里是从最后一个有孩子节点的节点开始到堆顶，采用逐级下沉的方式维护最小堆的性质。</p>
+<p>（全文完）</p>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ol>
+<li>《算法导论（第三版）》</li>
+</ol>
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2019/08/18/Java并发之wait-notify/" title="Java并发之wait/notify" class="next">NEXT</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>
