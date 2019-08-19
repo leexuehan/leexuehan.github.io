@@ -175,83 +175,8 @@ final Node&lt;K,V&gt; getNode(int hash, Object key) {
 </code></pre><p>HashMap则通过 h&amp;（length-1）替代取模，得到所在数组位置，这样效率会高很多。</p>
 <h4 id="位桶扩容"><a href="#位桶扩容" class="headerlink" title="位桶扩容"></a>位桶扩容</h4><p>构造hash表时，如果不指明初始大小，默认大小为16（即Node数组大小16），如果Node[]数组中的元素达到（填充比*Node.length）</p>
 <p>请看代码：</p>
-<pre><code> //可用来初始化HashMap大小 或重新调整HashMap大小 变为原来2倍大小  
-final Node&lt;K,V&gt;[] resize() {  
-    Node&lt;K,V&gt;[] oldTab = table;  
-    int oldCap = (oldTab == null) ? 0 : oldTab.length;  
-    int oldThr = threshold;  
-    int newCap, newThr = 0;  
-    if (oldCap &gt; 0) {  
-        if (oldCap &gt;= MAXIMUM_CAPACITY) {//超过1&gt;&gt;30大小,无法扩容只能改变 阈值  
-            threshold = Integer.MAX_VALUE;  
-            return oldTab;  
-        }  
-        else if ((newCap = oldCap &lt;&lt; 1) &lt; MAXIMUM_CAPACITY &amp;&amp;  
-                 oldCap &gt;= DEFAULT_INITIAL_CAPACITY)//新的容量为旧的2倍 最小也是16  
-            newThr = oldThr &lt;&lt; 1; // 扩容阈值加倍  
-    }  
-    else if (oldThr &gt; 0)   
-        newCap = oldThr;//oldCap=0 ,oldThr&gt;0此时newThr=0   
-    else {               //oldCap=0,oldThr=0 相当于使用默认填充比和初始容量 初始化  
-        newCap = DEFAULT_INITIAL_CAPACITY;  
-        newThr = (int)(DEFAULT_LOAD_FACTOR * DEFAULT_INITIAL_CAPACITY);  
-    }  
-
-    if (newThr == 0) {  
-        float ft = (float)newCap * loadFactor;  
-        newThr = (newCap &lt; MAXIMUM_CAPACITY &amp;&amp; ft &lt; (float)MAXIMUM_CAPACITY ?  
-                  (int)ft : Integer.MAX_VALUE);  
-    }  
-    threshold = newThr;  
-    @SuppressWarnings({&quot;rawtypes&quot;,&quot;unchecked&quot;})  
-        Node&lt;K,V&gt;[] newTab = (Node&lt;K,V&gt;[])new Node[newCap];  
-    //数组辅助到新的数组中，分红黑树和链表讨论  
-    table = newTab;  
-    if (oldTab != null) {  
-        for (int j = 0; j &lt; oldCap; ++j) {  
-            Node&lt;K,V&gt; e;  
-            if ((e = oldTab[j]) != null) {  
-                oldTab[j] = null;  
-                if (e.next == null)  
-                    newTab[e.hash &amp; (newCap - 1)] = e;  
-                else if (e instanceof TreeNode)  
-                    ((TreeNode&lt;K,V&gt;)e).split(this, newTab, j, oldCap);  
-                else { // preserve order  
-                    Node&lt;K,V&gt; loHead = null, loTail = null;  
-                    Node&lt;K,V&gt; hiHead = null, hiTail = null;  
-                    Node&lt;K,V&gt; next;  
-                    do {  
-                        next = e.next;  
-                        if ((e.hash &amp; oldCap) == 0) {  
-                            if (loTail == null)  
-                                loHead = e;  
-                            else  
-                                loTail.next = e;  
-                            loTail = e;  
-                        }  
-                        else {  
-                            if (hiTail == null)  
-                                hiHead = e;  
-                            else  
-                                hiTail.next = e;  
-                            hiTail = e;  
-                        }  
-                    } while ((e = next) != null);  
-                    if (loTail != null) {  
-                        loTail.next = null;  
-                        newTab[j] = loHead;  
-                    }  
-                    if (hiTail != null) {  
-                        hiTail.next = null;  
-                        newTab[j + oldCap] = hiHead;  
-                    }  
-                }  
-            }  
-        }  
-    }  
-    return newTab;  
-}  
-</code></pre><p>在HashMap实现中还可以看到如下代码取代了以前版本JDK1.6的while循环来保证哈希表的容量一直是2的整数倍数，用移位操作取代了循环移位。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//可用来初始化HashMap大小 或重新调整HashMap大小 变为原来2倍大小  </span></span><br><span class="line">  <span class="keyword">final</span> Node&lt;K,V&gt;[] resize() &#123;  </span><br><span class="line">      Node&lt;K,V&gt;[] oldTab = table;  </span><br><span class="line">      <span class="keyword">int</span> oldCap = (oldTab == <span class="keyword">null</span>) ? <span class="number">0</span> : oldTab.length;  </span><br><span class="line">      <span class="keyword">int</span> oldThr = threshold;  </span><br><span class="line">      <span class="keyword">int</span> newCap, newThr = <span class="number">0</span>;  </span><br><span class="line">      <span class="keyword">if</span> (oldCap &gt; <span class="number">0</span>) &#123;  </span><br><span class="line">          <span class="keyword">if</span> (oldCap &gt;= MAXIMUM_CAPACITY) &#123;<span class="comment">//超过1&gt;&gt;30大小,无法扩容只能改变 阈值  </span></span><br><span class="line">              threshold = Integer.MAX_VALUE;  </span><br><span class="line">              <span class="keyword">return</span> oldTab;  </span><br><span class="line">          &#125;  </span><br><span class="line">          <span class="keyword">else</span> <span class="keyword">if</span> ((newCap = oldCap &lt;&lt; <span class="number">1</span>) &lt; MAXIMUM_CAPACITY &amp;&amp;  </span><br><span class="line">                   oldCap &gt;= DEFAULT_INITIAL_CAPACITY)<span class="comment">//新的容量为旧的2倍 最小也是16  </span></span><br><span class="line">              newThr = oldThr &lt;&lt; <span class="number">1</span>; <span class="comment">// 扩容阈值加倍  </span></span><br><span class="line">      &#125;  </span><br><span class="line">      <span class="keyword">else</span> <span class="keyword">if</span> (oldThr &gt; <span class="number">0</span>)   </span><br><span class="line">          newCap = oldThr;<span class="comment">//oldCap=0 ,oldThr&gt;0此时newThr=0   </span></span><br><span class="line">      <span class="keyword">else</span> &#123;               <span class="comment">//oldCap=0,oldThr=0 相当于使用默认填充比和初始容量 初始化  </span></span><br><span class="line">          newCap = DEFAULT_INITIAL_CAPACITY;  </span><br><span class="line">          newThr = (<span class="keyword">int</span>)(DEFAULT_LOAD_FACTOR * DEFAULT_INITIAL_CAPACITY);  </span><br><span class="line">      &#125;  </span><br><span class="line">        </span><br><span class="line">      <span class="keyword">if</span> (newThr == <span class="number">0</span>) &#123;  </span><br><span class="line">          <span class="keyword">float</span> ft = (<span class="keyword">float</span>)newCap * loadFactor;  </span><br><span class="line">          newThr = (newCap &lt; MAXIMUM_CAPACITY &amp;&amp; ft &lt; (<span class="keyword">float</span>)MAXIMUM_CAPACITY ?  </span><br><span class="line">                    (<span class="keyword">int</span>)ft : Integer.MAX_VALUE);  </span><br><span class="line">      &#125;  </span><br><span class="line">      threshold = newThr;  </span><br><span class="line">      <span class="meta">@SuppressWarnings</span>(&#123;<span class="string">"rawtypes"</span>,<span class="string">"unchecked"</span>&#125;)  </span><br><span class="line">          Node&lt;K,V&gt;[] newTab = (Node&lt;K,V&gt;[])<span class="keyword">new</span> Node[newCap];  </span><br><span class="line">      <span class="comment">//数组辅助到新的数组中，分红黑树和链表讨论  </span></span><br><span class="line">      table = newTab;  </span><br><span class="line">      <span class="keyword">if</span> (oldTab != <span class="keyword">null</span>) &#123;  </span><br><span class="line">          <span class="keyword">for</span> (<span class="keyword">int</span> j = <span class="number">0</span>; j &lt; oldCap; ++j) &#123;  </span><br><span class="line">              Node&lt;K,V&gt; e;  </span><br><span class="line">              <span class="keyword">if</span> ((e = oldTab[j]) != <span class="keyword">null</span>) &#123;  </span><br><span class="line">                  oldTab[j] = <span class="keyword">null</span>;  </span><br><span class="line">                  <span class="keyword">if</span> (e.next == <span class="keyword">null</span>)  </span><br><span class="line">                      newTab[e.hash &amp; (newCap - <span class="number">1</span>)] = e;  </span><br><span class="line">                  <span class="keyword">else</span> <span class="keyword">if</span> (e <span class="keyword">instanceof</span> TreeNode)  </span><br><span class="line">                      ((TreeNode&lt;K,V&gt;)e).split(<span class="keyword">this</span>, newTab, j, oldCap);  </span><br><span class="line">                  <span class="keyword">else</span> &#123; <span class="comment">// preserve order  </span></span><br><span class="line">                      Node&lt;K,V&gt; loHead = <span class="keyword">null</span>, loTail = <span class="keyword">null</span>;  </span><br><span class="line">                      Node&lt;K,V&gt; hiHead = <span class="keyword">null</span>, hiTail = <span class="keyword">null</span>;  </span><br><span class="line">                      Node&lt;K,V&gt; next;  </span><br><span class="line">                      <span class="keyword">do</span> &#123;  </span><br><span class="line">                          next = e.next;  </span><br><span class="line">                          <span class="keyword">if</span> ((e.hash &amp; oldCap) == <span class="number">0</span>) &#123;  </span><br><span class="line">                              <span class="keyword">if</span> (loTail == <span class="keyword">null</span>)  </span><br><span class="line">                                  loHead = e;  </span><br><span class="line">                              <span class="keyword">else</span>  </span><br><span class="line">                                  loTail.next = e;  </span><br><span class="line">                              loTail = e;  </span><br><span class="line">                          &#125;  </span><br><span class="line">                          <span class="keyword">else</span> &#123;  </span><br><span class="line">                              <span class="keyword">if</span> (hiTail == <span class="keyword">null</span>)  </span><br><span class="line">                                  hiHead = e;  </span><br><span class="line">                              <span class="keyword">else</span>  </span><br><span class="line">                                  hiTail.next = e;  </span><br><span class="line">                              hiTail = e;  </span><br><span class="line">                          &#125;  </span><br><span class="line">                      &#125; <span class="keyword">while</span> ((e = next) != <span class="keyword">null</span>);  </span><br><span class="line">                      <span class="keyword">if</span> (loTail != <span class="keyword">null</span>) &#123;  </span><br><span class="line">                          loTail.next = <span class="keyword">null</span>;  </span><br><span class="line">                          newTab[j] = loHead;  </span><br><span class="line">                      &#125;  </span><br><span class="line">                      <span class="keyword">if</span> (hiTail != <span class="keyword">null</span>) &#123;  </span><br><span class="line">                          hiTail.next = <span class="keyword">null</span>;  </span><br><span class="line">                          newTab[j + oldCap] = hiHead;  </span><br><span class="line">                      &#125;  </span><br><span class="line">                  &#125;  </span><br><span class="line">              &#125;  </span><br><span class="line">          &#125;  </span><br><span class="line">      &#125;  </span><br><span class="line">      <span class="keyword">return</span> newTab;  </span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+<p>在HashMap实现中还可以看到如下代码取代了以前版本JDK1.6的while循环来保证哈希表的容量一直是2的整数倍数，用移位操作取代了循环移位。</p>
 <pre><code>//这段代码保证HashMap的容量总是2的n次方  
 static final int tableSizeFor(int cap) {  
     int n = cap - 1;  
@@ -294,21 +219,8 @@ static final int tableSizeFor(int cap) {
 public HashMap() {
     this.loadFactor = DEFAULT_LOAD_FACTOR; // all other fields defaulted
 }
-
-
-public HashMap(int initialCapacity, float loadFactor) {
-    if (initialCapacity &lt; 0)
-        throw new IllegalArgumentException(&quot;Illegal initial capacity: &quot; +
-                                           initialCapacity);
-    if (initialCapacity &gt; MAXIMUM_CAPACITY)
-        initialCapacity = MAXIMUM_CAPACITY;
-    if (loadFactor &lt;= 0 || Float.isNaN(loadFactor))
-        throw new IllegalArgumentException(&quot;Illegal load factor: &quot; +
-                                           loadFactor);
-    this.loadFactor = loadFactor;
-    this.threshold = tableSizeFor(initialCapacity);
-}
-</code></pre><h3 id="fail-fast机制"><a href="#fail-fast机制" class="headerlink" title="fail-fast机制"></a>fail-fast机制</h3><p>我们知道java.util.HashMap不是线程安全的，因此如果在<strong>使用迭代器进行遍历的过程中</strong>有其他线程修改了map，那么将抛出ConcurrentModificationException，这就是所谓<strong>fail-fast策略</strong>。</p>
+</code></pre><p>​<br>        public HashMap(int initialCapacity, float loadFactor) {<br>            if (initialCapacity &lt; 0)<br>                throw new IllegalArgumentException(“Illegal initial capacity: “ +<br>                                                   initialCapacity);<br>            if (initialCapacity &gt; MAXIMUM_CAPACITY)<br>                initialCapacity = MAXIMUM_CAPACITY;<br>            if (loadFactor &lt;= 0 || Float.isNaN(loadFactor))<br>                throw new IllegalArgumentException(“Illegal load factor: “ +<br>                                                   loadFactor);<br>            this.loadFactor = loadFactor;<br>            this.threshold = tableSizeFor(initialCapacity);<br>        }</p>
+<h3 id="fail-fast机制"><a href="#fail-fast机制" class="headerlink" title="fail-fast机制"></a>fail-fast机制</h3><p>我们知道java.util.HashMap不是线程安全的，因此如果在<strong>使用迭代器进行遍历的过程中</strong>有其他线程修改了map，那么将抛出ConcurrentModificationException，这就是所谓<strong>fail-fast策略</strong>。</p>
 <p>下面是一个HashMap迭代器的抽象类源码：</p>
 <pre><code> abstract class HashIterator {
     Node&lt;K,V&gt; next;        // next entry to return
@@ -391,7 +303,7 @@ public HashMap(int initialCapacity, float loadFactor) {
     return false;
 }
 </code></pre><p>好累啊，终于写完了，Java的一大好处就是所有的源码你想看都可以看到，同时代码的易读性也很好。学习源码是了解Java 的一大法宝。</p>
-</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2015/07/27/SpringMVC深度探险系列文章/" title="SpringMVC深度探险系列文章" class="prev">PREV</a><a href="/2015/07/26/动态代理/" title="动态代理" class="next">NEXT</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2015/07/27/SpringMVC深度探险系列文章/" title="SpringMVC深度探险系列文章" class="prev">上一篇</a><a href="/2015/07/26/动态代理/" title="动态代理" class="next">下一篇</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
     el: "#vcomments",
     appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
     appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
