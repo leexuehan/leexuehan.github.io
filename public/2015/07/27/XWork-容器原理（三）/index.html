@@ -1,0 +1,679 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.8.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> XWork 容器原理（三） · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="XWork 容器原理（三） - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">XWork 容器原理（三）</h1><div class="post-info">2015-07-27<p class="visit"><i data-identity="2015/07/27/XWork-容器原理（三）/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><h2 id="Action"><a href="#Action" class="headerlink" title="Action"></a>Action</h2><p>Action 是控制流元素的核心。Action的定义：</p>
+<pre><code>public interface Action {
+
+    /**
+     * The action execution was successful. Show result
+     * view to the end user.
+     */
+    public static final String SUCCESS = &quot;success&quot;;
+
+    /**
+     * The action execution was successful but do not
+     * show a view. This is useful for actions that are
+     * handling the view in another fashion like redirect.
+     */
+    public static final String NONE = &quot;none&quot;;
+
+    /**
+     * The action execution was a failure.
+     * Show an error view, possibly asking the
+     * user to retry entering data.
+     */
+    public static final String ERROR = &quot;error&quot;;
+
+    /**
+     * The action execution require more input
+     * in order to succeed.
+     * This result is typically used if a form
+     * handling action has been executed so as
+     * to provide defaults for a form. The
+     * form associated with the handler should be
+     * shown to the end user.
+     * &lt;p/&gt;
+     * This result is also used if the given input
+     * params are invalid, meaning the user
+     * should try providing input again.
+     */
+    public static final String INPUT = &quot;input&quot;;
+
+    /**
+     * The action could not execute, since the
+     * user most was not logged in. The login view
+     * should be shown.
+     */
+    public static final String LOGIN = &quot;login&quot;;
+
+
+    /**
+     * Where the logic of the action is executed.
+     *
+     * @return a string representing the logical result of the execution.
+     *         See constants in this interface for a list of standard result values.
+     * @throws Exception thrown if a system level exception occurs.
+     *                   &lt;b&gt;Note:&lt;/b&gt; Application level exceptions should be handled by returning
+     *                   an error value, such as &lt;code&gt;Action.ERROR&lt;/code&gt;.
+     */
+    public String execute() throws Exception;
+
+}
+</code></pre><p>Action 接口的具体实现类是 XWork 进行核心业务逻辑处理的场所。</p>
+<p>从源代码中可以看出，接口方法中并没有任何参数，表明Action执行时所需要的数据，无论是请求参数还是响应返回数据，都以Action属性变量的形式出现。</p>
+<p>接口方法中返回值是一个字符串形式，表示业务逻辑是否执行成功的标志，在Action中起到流程控制的标志作用。</p>
+<h3 id="Action-的突破点"><a href="#Action-的突破点" class="headerlink" title="Action 的突破点"></a>Action 的突破点</h3><p>1.<strong>突破了传统的Servlet的模式中相应对象对Web容器的依赖</strong></p>
+<p>任何响应对象只要实现了简单的Action接口，它就能成为一个Http响应类，我们在Http响应类中看不到任何对于Web容器的引用。</p>
+<p>2.<strong>突破了传统Servlet模式中响应对象无状态的限制</strong></p>
+<p>XWork 中的Action是一个状态与动作的结合体。</p>
+<h2 id="Interceptor"><a href="#Interceptor" class="headerlink" title="Interceptor"></a>Interceptor</h2><p>官方定义：</p>
+<blockquote>
+<p>Interceptor can execute code before and after an Action is invoked.</p>
+</blockquote>
+<p>Interceptor 是属于 AOP 中的概念，本质是一个代码段，通过定义织入点来指定 Interceptor 的代码逻辑在织入点元素的之前或者之后执行，从而起到“拦截”的作用。</p>
+<h3 id="源码"><a href="#源码" class="headerlink" title="源码"></a>源码</h3><pre><code>public interface Interceptor extends Serializable {
+
+    /**
+     * Called to let an interceptor clean up any resources it has allocated.
+     */
+    void destroy();
+
+    /**
+     * Called after an interceptor is created, but before any requests are processed using
+     * {@link #intercept(com.opensymphony.xwork2.ActionInvocation) intercept} , giving
+     * the Interceptor a chance to initialize any needed resources.
+     */
+    void init();
+
+    /**
+     * Allows the Interceptor to do some processing on the request before and/or after the rest of the processing of the
+     * request by the {@link ActionInvocation} or to short-circuit the processing and just return a String return code.
+     *
+     * @param invocation the action invocation
+     * @return the return code, either returned from {@link ActionInvocation#invoke()}, or from the interceptor itself.
+     * @throws Exception any system-level error, as defined in {@link com.opensymphony.xwork2.Action#execute()}.
+     */
+    String intercept(ActionInvocation invocation) throws Exception;
+
+}
+</code></pre><p>init 和 destroy 方法在 Interceptor 对象初始化和销毁的时候被调用一次，主要用于对 Interceptor 内部所依赖的外部资源进行初始化和销毁管理。</p>
+<p>Intercept 方法中的参数是 ActionInvocation。它是XWork控制流元素的核心调度元素。</p>
+<p>在Intercept方法中使用这样一个元素作为参数，主要基于两点考虑：</p>
+<p>1.便于 Interceptor 随时与控制流和数据流的其他元素沟通</p>
+<p>ActionInvocation 的操作接口中不仅包含对控制流元素Action 和 ActionProxy 的访问控制，同时也包含了对数据流元素 ActionContext 和 ValueStack 的访问接口。</p>
+<p>2.便于 ActionInvocation 在 Interceptor 的内部进行执行调度</p>
+<p>在 Interceptor 内部，我们可以通过操作 ActionInvocation的调度接口，对整个控制流元素进行执行调度。</p>
+<p>在Interceptor 内部，存在着两种不同的执行逻辑：</p>
+<p>1.调用 ActionInvocation 的 invoke 方法来指定对执行栈的进一步调度执行。</p>
+<p>Interceptor 在完成了自身的逻辑之后，有责任把执行的控制权转移到执行栈中的下一个元素继续执行，而执行栈的下一个元素不是 Interceptor 就是 Action 对象，因此他们又一次形成了一个自动<strong>递归调用链</strong>。</p>
+<p>2.直接返回一个String类型的ResultCode 来终止执行栈的调度进行</p>
+<h2 id="ActionInvocation"><a href="#ActionInvocation" class="headerlink" title="ActionInvocation"></a>ActionInvocation</h2><pre><code>public interface ActionInvocation extends Serializable {
+
+    /**
+     * Get the Action associated with this ActionInvocation.
+     *
+     * @return the Action
+     */
+    Object getAction();
+
+    /**
+     * Gets whether this ActionInvocation has executed before.
+     * This will be set after the Action and the Result have executed.
+     *
+     * @return &lt;tt&gt;true&lt;/tt&gt; if this ActionInvocation has executed before.
+     */
+    boolean isExecuted();
+
+    /**
+     * Gets the ActionContext associated with this ActionInvocation. The ActionProxy is
+     * responsible for setting this ActionContext onto the ThreadLocal before invoking
+     * the ActionInvocation and resetting the old ActionContext afterwards.
+     *
+     * @return the ActionContext.
+     */
+    ActionContext getInvocationContext();
+
+    /**
+     * Get the ActionProxy holding this ActionInvocation.
+     *
+     * @return the ActionProxy.
+     */
+    ActionProxy getProxy();
+
+    /**
+     * If the ActionInvocation has been executed before and the Result is an instance of {@link ActionChainResult}, this method
+     * will walk down the chain of &lt;code&gt;ActionChainResult&lt;/code&gt;s until it finds a non-chain result, which will be returned. If the
+     * ActionInvocation&apos;s result has not been executed before, the Result instance will be created and populated with
+     * the result params.
+     *
+     * @return the result.
+     * @throws Exception can be thrown.
+     */
+    Result getResult() throws Exception;
+
+    /**
+     * Gets the result code returned from this ActionInvocation.
+     *
+     * @return the result code
+     */
+    String getResultCode();
+
+
+    void setResultCode(String resultCode);
+
+    /**
+     * Gets the ValueStack associated with this ActionInvocation.
+     *
+     * @return the ValueStack
+     */
+    ValueStack getStack();
+
+    /**
+     * Register a {@link PreResultListener} to be notified after the Action is executed and
+     * before the Result is executed.
+     * &lt;p/&gt;
+     * The ActionInvocation implementation must guarantee that listeners will be called in
+     * the order in which they are registered.
+     * &lt;p/&gt;
+     * Listener registration and execution does not need to be thread-safe.
+     *
+     * @param listener the listener to add.
+     */
+    void addPreResultListener(PreResultListener listener);
+
+    /**
+     * Invokes the next step in processing this ActionInvocation.
+     * &lt;p/&gt;
+     * If there are more Interceptors, this will call the next one. If Interceptors choose not to short-circuit
+     * ActionInvocation processing and return their own return code, they will call invoke() to allow the next Interceptor
+     * to execute. If there are no more Interceptors to be applied, the Action is executed.
+     * If the {@link ActionProxy#getExecuteResult()} method returns &lt;tt&gt;true&lt;/tt&gt;, the Result is also executed.
+     *
+     * @throws Exception can be thrown.
+     * @return the return code.
+     */
+    String invoke() throws Exception;
+
+    /**
+     * Invokes only the Action (not Interceptors or Results).
+     * &lt;p/&gt;
+     * This is useful in rare situations where advanced usage with the interceptor/action/result workflow is
+     * being manipulated for certain functionality.
+     *
+     * @return the return code.
+     * @throws Exception can be thrown.
+     */
+    String invokeActionOnly() throws Exception;
+
+    /**
+     * Sets the action event listener to respond to key action events.
+     *
+     * @param listener the listener.
+     */
+    void setActionEventListener(ActionEventListener listener);
+
+    void init(ActionProxy proxy) ;
+
+    /**
+     * Prepares instance of ActionInvocation to be serializable,
+     * which simple means removing all unserializable fields, eg. Container
+     *
+     * @return ActionInvocation which can be serialize (eg. into HttpSession)
+     */
+    ActionInvocation serialize();
+
+    /**
+     * Performs opposite process to restore back ActionInvocation after deserialisation
+     *
+     * @param actionContext current {@link ActionContext}
+     * @return fully operational ActionInvocation
+     */
+    ActionInvocation deserialize(ActionContext actionContext);
+
+}
+</code></pre><p>从上面的代码中可以看出，上面的接口方法可以分为以下几类：</p>
+<p>1.对控制流元素和数据流元素的访问接口：getAction，getActionProxy，getStack</p>
+<p>2.对执行调度流程的扩展接口：addPreListener，setActionEventListener</p>
+<p>3.对执行栈进行调度执行的接口：invoke，invokeActionOnly</p>
+<pre><code>/**
+ * @throws ConfigurationException If no result can be found with the returned code
+ */
+public String invoke() throws Exception {
+    String profileKey = &quot;invoke: &quot;;
+    try {
+        UtilTimerStack.push(profileKey);
+
+        if (executed) {
+            throw new IllegalStateException(&quot;Action has already executed&quot;);
+        }
+
+        if (interceptors.hasNext()) {
+            final InterceptorMapping interceptor = interceptors.next();
+            String interceptorMsg = &quot;interceptor: &quot; + interceptor.getName();
+            UtilTimerStack.push(interceptorMsg);
+            try {
+                            resultCode = interceptor.getInterceptor().intercept(DefaultActionInvocation.this);
+                        }
+            finally {
+                UtilTimerStack.pop(interceptorMsg);
+            }
+        } else {
+            resultCode = invokeActionOnly();
+        }
+
+        // this is needed because the result will be executed, then control will return to the Interceptor, which will
+        // return above and flow through again
+        if (!executed) {
+            if (preResultListeners != null) {
+                for (Object preResultListener : preResultListeners) {
+                    PreResultListener listener = (PreResultListener) preResultListener;
+
+                    String _profileKey = &quot;preResultListener: &quot;;
+                    try {
+                        UtilTimerStack.push(_profileKey);
+                        listener.beforeResult(this, resultCode);
+                    }
+                    finally {
+                        UtilTimerStack.pop(_profileKey);
+                    }
+                }
+            }
+
+            // now execute the result, if we&apos;re supposed to
+            if (proxy.getExecuteResult()) {
+                executeResult();
+            }
+
+            executed = true;
+        }
+
+        return resultCode;
+    }
+    finally {
+        UtilTimerStack.pop(profileKey);
+    }
+}
+</code></pre><p>如果执行栈中下一个元素是 Interceptor 对象，那么执行该 Interceptor；如果执行栈中下一个元素是 Action 对象，那么执行该 Action；如果找不到下一个元素，执行终止，返回执行结果 ResultCode.</p>
+<h2 id="ActionProxy"><a href="#ActionProxy" class="headerlink" title="ActionProxy"></a>ActionProxy</h2><p>是位于整个XWork控制流体系的最外层的元素，也是整个XWork框架的门户。</p>
+<pre><code>public interface ActionProxy {
+
+    /**
+     * Gets the Action instance for this Proxy.
+     *
+     * @return the Action instance
+     */
+    Object getAction();
+
+    /**
+     * Gets the alias name this ActionProxy is mapped to.
+     *
+     * @return the alias name
+     */
+    String getActionName();
+
+    /**
+     * Gets the ActionConfig this ActionProxy is built from.
+     *
+     * @return the ActionConfig
+     */
+    ActionConfig getConfig();
+
+    /**
+     * Sets whether this ActionProxy should also execute the Result after executing the Action.
+     *
+     * @param executeResult &lt;tt&gt;true&lt;/tt&gt; to also execute the Result.
+     */
+    void setExecuteResult(boolean executeResult);
+
+    /**
+     * Gets the status of whether the ActionProxy is set to execute the Result after the Action is executed.
+     *
+     * @return the status
+     */
+    boolean getExecuteResult();
+
+    /**
+     * Gets the ActionInvocation associated with this ActionProxy.
+     *
+     * @return the ActionInvocation
+     */
+    ActionInvocation getInvocation();
+
+    /**
+     * Gets the namespace the ActionConfig for this ActionProxy is mapped to.
+     *
+     * @return the namespace
+     */
+    String getNamespace();
+
+    /**
+     * Execute this ActionProxy. This will set the ActionContext from the ActionInvocation into the ActionContext
+     * ThreadLocal before invoking the ActionInvocation, then set the old ActionContext back into the ThreadLocal.
+     *
+     * @return the result code returned from executing the ActionInvocation
+     * @throws Exception can be thrown.
+     * @see ActionInvocation
+     */
+    String execute() throws Exception;
+
+    /**
+     * Gets the method name to execute, or &lt;tt&gt;null&lt;/tt&gt; if no method has been specified (meaning &lt;code&gt;execute&lt;/code&gt; will be invoked).
+     *
+     * @return the method to execute
+     */
+    String getMethod();
+
+    /**
+     * Gets status of the method value&apos;s initialization.
+     *
+     * @return true if the method returned by getMethod() is not a default initializer value.
+     */
+    boolean isMethodSpecified();
+
+}
+</code></pre><p>可以从ActionProxy的定义中看到，ActionProxy与众多配置元素相关的操作接口。这表明：</p>
+<blockquote>
+<p>ActionProxy的首要职责是维护XWork的执行元素与请求对象之间的配置映射关系。</p>
+</blockquote>
+<h3 id="ActionProxy的初始化"><a href="#ActionProxy的初始化" class="headerlink" title="ActionProxy的初始化"></a>ActionProxy的初始化</h3><p>与众多的XWork内置元素一样，ActionProxy的构建过程也是通过工厂方法来完成的。</p>
+<pre><code>public class DefaultActionProxyFactory implements ActionProxyFactory {
+
+    protected Container container;
+
+    public DefaultActionProxyFactory() {
+        super();
+    }
+
+    @Inject
+    public void setContainer(Container container) {
+        this.container = container;
+    }
+
+    ...
+
+    public ActionProxy createActionProxy(String namespace, String actionName, String methodName, Map&lt;String, Object&gt; extraContext, boolean executeResult, boolean cleanupContext) {
+        //创建与ActionProxy所关联的ActionInvocation对象
+        ActionInvocation inv = new DefaultActionInvocation(extraContext, true);
+        //依赖注入
+        container.inject(inv);
+        return createActionProxy(inv, namespace, actionName, methodName, executeResult, cleanupContext);
+    }
+
+    ...
+
+    public ActionProxy createActionProxy(ActionInvocation inv, String namespace, String actionName, String methodName, boolean executeResult, boolean cleanupContext) {
+
+        DefaultActionProxy proxy = new DefaultActionProxy(inv, namespace, actionName, methodName, executeResult, cleanupContext);
+        container.inject(proxy);
+        proxy.prepare();
+        return proxy;
+    }
+
+    @Override
+    public String toString() {
+        return getClass().getSimpleName();
+    }
+
+}
+</code></pre><h2 id="Action交互体系"><a href="#Action交互体系" class="headerlink" title="Action交互体系"></a>Action交互体系</h2><h3 id="外部环境交互体系"><a href="#外部环境交互体系" class="headerlink" title="外部环境交互体系"></a>外部环境交互体系</h3><p>主要是指在XWork的Action中如何与XWork执行环境之外的调用环境进行交互。实际上就是Action与Web容器中的HttpServletRequest、HttpServletResponse、HttpSession对象的交互过程。</p>
+<p>一种方法是调用ServletActionContext的静态方法：</p>
+<pre><code>HttpServletRequest req = ServletActionContext.getRequest();
+
+HttpServletResponse res = ServletActionContext.getResponse();
+
+ServletContext sc  = ServletActionContext.getServletContext();
+</code></pre><p>除此之外，Struts2还有另外一套 Web 对象的访问机制：</p>
+<p>一套对象的访问机制首先建立在一系列的Aware接口之上。</p>
+<pre><code>public interface ServletContextAware {
+
+    public void setServletContext(ServletContext context);
+}
+</code></pre><p>若 Action 实现了上面所示的接口，我们就可以在这些由Aware接口所带来的设置外部环境操作接口方法中实现了这些操作接口的本地存储。</p>
+<h3 id="数据交互体系"><a href="#数据交互体系" class="headerlink" title="数据交互体系"></a>数据交互体系</h3><p>反映了 Action 与数据流元素进行交互的过程。</p>
+<p>Action 对于请求-响应的实现采用 POJO 模式，也就是说所有的请求数据和响应数据在 Action 中都以属性变量的形式出现，那么将请求数据从数据环境中读取，并设置到 Action 的属性变量的过程就是我们所说的映射过程。</p>
+<p>这个过程是由 ParametersInterceptor 这个拦截器来完成。</p>
+<pre><code>@Override
+public String doIntercept(ActionInvocation invocation) throws Exception {
+    Object action = invocation.getAction();
+    if (!(action instanceof NoParameters)) {
+        ActionContext ac = invocation.getInvocationContext();
+        final Map&lt;String, Object&gt; parameters = retrieveParameters(ac);
+
+        if (LOG.isDebugEnabled()) {
+            LOG.debug(&quot;Setting params &quot; + getParameterLogMap(parameters));
+        }
+
+        if (parameters != null) {
+            Map&lt;String, Object&gt; contextMap = ac.getContextMap();
+            try {
+                ReflectionContextState.setCreatingNullObjects(contextMap, true);
+                ReflectionContextState.setDenyMethodExecution(contextMap, true);
+                ReflectionContextState.setReportingConversionErrors(contextMap, true);
+
+                ValueStack stack = ac.getValueStack();
+                setParameters(action, stack, parameters);
+            } finally {
+                ReflectionContextState.setCreatingNullObjects(contextMap, false);
+                ReflectionContextState.setDenyMethodExecution(contextMap, false);
+                ReflectionContextState.setReportingConversionErrors(contextMap, false);
+            }
+        }
+    }
+    return invocation.invoke();
+}
+</code></pre><p>以上一段代码来自由于类 ParametersInterceptor.java。截取的是这个拦截器的骨架部分。提供了对于Action数据的全方位支持，包括 Action对象是否支持接受请求参数、请求参数的排序、过滤等等。这些功能支持都被封装到 setParameters 方法中。</p>
+<pre><code>protected void setParameters(final Object action, ValueStack stack, final Map&lt;String, Object&gt; parameters) {
+        Map&lt;String, Object&gt; params;
+        Map&lt;String, Object&gt; acceptableParameters;
+        if (ordered) {
+            params = new TreeMap&lt;String, Object&gt;(getOrderedComparator());
+            acceptableParameters = new TreeMap&lt;String, Object&gt;(getOrderedComparator());
+            params.putAll(parameters);
+        } else {
+            params = new TreeMap&lt;String, Object&gt;(parameters);
+            acceptableParameters = new TreeMap&lt;String, Object&gt;();
+        }
+
+        for (Map.Entry&lt;String, Object&gt; entry : params.entrySet()) {
+            String name = entry.getKey();
+            Object value = entry.getValue();
+            if (isAcceptableParameter(name, action) &amp;&amp; isAcceptableValue(value)) {
+                acceptableParameters.put(name, entry.getValue());
+            }
+        }
+
+        ValueStack newStack = valueStackFactory.createValueStack(stack);
+        boolean clearableStack = newStack instanceof ClearableValueStack;
+        if (clearableStack) {
+            //if the stack&apos;s context can be cleared, do that to prevent OGNL
+            //from having access to objects in the stack, see XW-641
+            ((ClearableValueStack)newStack).clearContextValues();
+            Map&lt;String, Object&gt; context = newStack.getContext();
+            ReflectionContextState.setCreatingNullObjects(context, true);
+            ReflectionContextState.setDenyMethodExecution(context, true);
+            ReflectionContextState.setReportingConversionErrors(context, true);
+
+            //keep locale from original context
+            context.put(ActionContext.LOCALE, stack.getContext().get(ActionContext.LOCALE));
+        }
+
+        boolean memberAccessStack = newStack instanceof MemberAccessValueStack;
+        if (memberAccessStack) {
+            //block or allow access to properties
+            //see WW-2761 for more details
+            MemberAccessValueStack accessValueStack = (MemberAccessValueStack) newStack;
+            accessValueStack.setAcceptProperties(acceptedPatterns.getAcceptedPatterns());
+            accessValueStack.setExcludeProperties(excludedPatterns.getExcludedPatterns());
+        }
+
+        for (Map.Entry&lt;String, Object&gt; entry : acceptableParameters.entrySet()) {
+            String name = entry.getKey();
+            Object value = entry.getValue();
+            try {
+                newStack.setParameter(name, value);
+            } catch (RuntimeException e) {
+                if (devMode) {
+                    notifyDeveloperParameterException(action, name, e.getMessage());
+                }
+            }
+        }
+
+        if (clearableStack &amp;&amp; (stack.getContext() != null) &amp;&amp; (newStack.getContext() != null))
+            stack.getContext().put(ActionContext.CONVERSION_ERRORS, newStack.getContext().get(ActionContext.CONVERSION_ERRORS));
+
+        addParametersToContext(ActionContext.getContext(), acceptableParameters);
+    }
+
+    protected void notifyDeveloperParameterException(Object action, String property, String message) {
+        String developerNotification = LocalizedTextUtil.findText(ParametersInterceptor.class, &quot;devmode.notification&quot;,
+                ActionContext.getContext().getLocale(), &quot;Developer Notification:\n{0}&quot;,
+                new Object[]{
+                        &quot;Unexpected Exception caught setting &apos;&quot; + property + &quot;&apos; on &apos;&quot; + action.getClass() + &quot;: &quot; + message
+                }
+        );
+        LOG.error(developerNotification);
+        // see https://issues.apache.org/jira/browse/WW-4066
+        if (action instanceof ValidationAware) {
+            Collection&lt;String&gt; messages = ((ValidationAware) action).getActionMessages();
+            messages.add(message);
+            ((ValidationAware) action).setActionMessages(messages);
+        }
+    }
+</code></pre><blockquote>
+<p>ParametersInterceptor 是一个将外部环境数据与 Action 的属性变量进行融合的骨架，而其中的 retrieveParameters 方法，就是外部环境数据的提供者。具体来说，只要继承ParametersInterceptor，然后覆盖其中的retrieveParameters方法，将其替换为自己的扩展逻辑，就可以轻松实现 Action 对象的数据交互。</p>
+</blockquote>
+<pre><code>protected Map&lt;String, Object&gt; retrieveParameters(ActionContext ac) {
+    return ac.getParameters();
+}
+</code></pre><h3 id="协作交互体系"><a href="#协作交互体系" class="headerlink" title="协作交互体系"></a>协作交互体系</h3><p>略。</p>
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2015/07/30/Struts-源码学习之初始化/" title="Struts 源码学习之初始化" class="prev">上一篇</a><a href="/2015/07/27/XWork-容器原理（二）/" title="XWork 容器原理（二）" class="next">下一篇</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

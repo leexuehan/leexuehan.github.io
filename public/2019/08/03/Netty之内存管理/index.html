@@ -1,0 +1,169 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.8.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> Netty之内存管理 · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Netty之内存管理 - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">Netty之内存管理</h1><div class="post-info">2019-08-03<p class="visit"><i data-identity="2019/08/03/Netty之内存管理/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><p>Netty 的内存管理使用了 buddy System，即伙伴分配算法。</p>
+<p>该算法也是 Linux 内核的内存分配算法，这篇文章对该分配算法做一个简要探讨。</p>
+<a id="more"></a>
+<h2 id="buddy-system"><a href="#buddy-system" class="headerlink" title="buddy system"></a>buddy system</h2><p>伙伴分配的实质是一种特殊的“分离适配”，即将内存<strong>按照2的幂</strong>进行划分，相当于分离出若干个块大小一致的空闲链表，搜索该链表并给出同需求<strong>最佳匹配</strong>的大小。</p>
+<p>表格中给的例子就是分配过程。</p>
+<p><div align="center"><img src="./内存分配释放表.jpg" alt="分配过程示例"></div></p>
+<h3 id="分配内存"><a href="#分配内存" class="headerlink" title="分配内存"></a>分配内存</h3><p>内存分配的流程图如下：</p>
+<p><div align="center"><img src="./内存分配.png" alt="内存分配"></div></p>
+<h3 id="释放内存"><a href="#释放内存" class="headerlink" title="释放内存"></a>释放内存</h3><p>释放内存的流程图如下：</p>
+<p><div align="center"><img src="./内存释放.png" alt="内存释放"></div></p>
+<h3 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h3><p>代码实现以一个 16 单元的内存管理为例：</p>
+<p><div align="center"><img src="./伙伴分配器.jpg" alt="伙伴分配器"></div></p>
+<p>因为是按照 2 的幂次划分内存层次，层层分裂，自然会联想到使用二叉树的数据结构来实现。</p>
+<p>分配器的整体思想是，通过一个数组形式的<strong>完全二叉树</strong>来监控管理内存，二叉树的节点用于<strong>标记</strong>相应内存块的使用状态：<strong>高层节点对应大的块，低层节点对应小的块，在分配和释放中使用节点的标记属性对块进行分离合并</strong>。</p>
+<p>如图所示，假设总大小为 <code>16</code> 个单位的内存，于是我们可以建立一个深度为 <code>5</code> 的满二叉树，根节点从下表<code>[0]</code>开始，监控大小为 <code>16</code> 的块；它的左右孩子节点下标[1~2]，监控大小为<code>8</code>的块；第三层下标为 [3~6] 监控大小为 <code>4</code> 的块，以此类推。</p>
+<p>分配器的数据结构如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">struct buddy2 &#123;</span><br><span class="line">  unsigned size;</span><br><span class="line">  unsigned longest[1];</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>结构体中的 <code>size</code> 是管理的总内存单元数目，成员 <code>longest</code> 是二叉树的结点标记，表明所对应内存的空闲单位。</p>
+<p>分配器的初始化代码如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">struct buddy2* buddy2_new( int size ) &#123;</span><br><span class="line">  struct buddy2* self;</span><br><span class="line">  unsigned node_size;</span><br><span class="line">  int i;</span><br><span class="line"> </span><br><span class="line">  if (size &lt; 1 || !IS_POWER_OF_2(size))</span><br><span class="line">    return NULL;</span><br><span class="line"> </span><br><span class="line">  self = (struct buddy2*)ALLOC( 2 * size * sizeof(unsigned));//分配器树的大小为 size 的 2倍</span><br><span class="line">  self-&gt;size = size;</span><br><span class="line">  node_size = size * 2; //满二叉树节点数</span><br><span class="line"> </span><br><span class="line">  for (i = 0; i &lt; 2 * size - 1; ++i) &#123;</span><br><span class="line">    if (IS_POWER_OF_2(i+1))</span><br><span class="line">      node_size /= 2;</span><br><span class="line">    self-&gt;longest[i] = node_size;//给每个节点分配管理的内存单元</span><br><span class="line">  &#125;</span><br><span class="line">  return self;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>整个分配器的大小就是满二叉树的节点数目，该数目为所需内存单元的 <code>2</code> 倍。<code>longest</code> 记录了节点所对应的的内存块大小。</p>
+<p>分配器初始化后，接下来就是进行实际的内存分配了。</p>
+<p>分配方法的入参：分配器指针和需要分配的内存大小；</p>
+<p>分配方法返回：内存块索引。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></td><td class="code"><pre><span class="line">int buddy2_alloc(struct buddy2* self, int size) &#123;</span><br><span class="line">  unsigned index = 0;</span><br><span class="line">  unsigned node_size;</span><br><span class="line">  unsigned offset = 0;</span><br><span class="line"> </span><br><span class="line">  if (self==NULL)</span><br><span class="line">    return -1;</span><br><span class="line"> </span><br><span class="line">  if (size &lt;= 0)</span><br><span class="line">    size = 1;</span><br><span class="line">  else if (!IS_POWER_OF_2(size))</span><br><span class="line">    size = fixsize(size);//调整为大于等于size的最小2的指数幂</span><br><span class="line"> </span><br><span class="line"> //如果整个内存的大小都无法满足申请的 size，则直接返回失败</span><br><span class="line">  if (self-&gt;longest[index] &lt; size)</span><br><span class="line">    return -1;</span><br><span class="line"> </span><br><span class="line"> /*分配核心算法：因为 size 已经调整为2的指数幂，所以会直接从最大的内存单元开始对半分离匹配*/</span><br><span class="line"> /*深度优先遍历*/</span><br><span class="line">  for(node_size = self-&gt;size; node_size != size; node_size /= 2 ) &#123;</span><br><span class="line">  	//左子树有足够的空间</span><br><span class="line">    if (self-&gt;longest[LEFT_LEAF(index)] &gt;= size)</span><br><span class="line">      index = LEFT_LEAF(index);</span><br><span class="line">    //右子树有足够的空间</span><br><span class="line">    else</span><br><span class="line">      index = RIGHT_LEAF(index);</span><br><span class="line">  &#125;</span><br><span class="line"> </span><br><span class="line"> //标记为已分配</span><br><span class="line">  self-&gt;longest[index] = 0;</span><br><span class="line">  //索引块偏移地址，作为返回值</span><br><span class="line">  offset = (index + 1) * node_size - self-&gt;size;</span><br><span class="line"> </span><br><span class="line"> //从已分配节点开始回溯，更新父节点的内存容量</span><br><span class="line">  while (index) &#123;</span><br><span class="line">    index = PARENT(index);</span><br><span class="line">    //取左右子节点的最大空闲值</span><br><span class="line">    self-&gt;longest[index] =</span><br><span class="line">      MAX(self-&gt;longest[LEFT_LEAF(index)], self-&gt;longest[RIGHT_LEAF(index)]);</span><br><span class="line">  &#125;</span><br><span class="line"> </span><br><span class="line">  return offset;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>释放内存的代码如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line">void buddy2_free(struct buddy2* self, int offset) &#123;</span><br><span class="line">  unsigned node_size, index = 0;</span><br><span class="line">  unsigned left_longest, right_longest;</span><br><span class="line"> </span><br><span class="line">  assert(self &amp;&amp; offset &gt;= 0 &amp;&amp; offset &lt; size);</span><br><span class="line"> </span><br><span class="line">  node_size = 1;</span><br><span class="line">  //根据 offset 推算出来在分配器树中节点的 index</span><br><span class="line">  index = offset + self-&gt;size - 1;</span><br><span class="line">  //第一个需要释放的节点 index开始回溯，直到找到 longest 值为0的节点</span><br><span class="line">  for (; self-&gt;longest[index] ; index = PARENT(index)) &#123;</span><br><span class="line">    node_size *= 2;</span><br><span class="line">    if (index == 0)</span><br><span class="line">      return;</span><br><span class="line">  &#125;</span><br><span class="line"> </span><br><span class="line"> //更新index所在节点的容量值</span><br><span class="line">  self-&gt;longest[index] = node_size;</span><br><span class="line"> </span><br><span class="line">  while (index) &#123;</span><br><span class="line">  	//上溯父节点</span><br><span class="line">    index = PARENT(index);</span><br><span class="line">    node_size *= 2;</span><br><span class="line">	//左子节点容量</span><br><span class="line">    left_longest = self-&gt;longest[LEFT_LEAF(index)];</span><br><span class="line">    //右子节点容量</span><br><span class="line">    right_longest = self-&gt;longest[RIGHT_LEAF(index)];</span><br><span class="line"> 	//左右子节点容量之和==node_size，则说明能够合并左右子节点</span><br><span class="line">    if (left_longest + right_longest == node_size)</span><br><span class="line">      self-&gt;longest[index] = node_size;</span><br><span class="line">    else</span><br><span class="line">    //不能合并，只更新为最大的</span><br><span class="line">      self-&gt;longest[index] = MAX(left_longest, right_longest);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="优缺点"><a href="#优缺点" class="headerlink" title="优缺点"></a>优缺点</h3><p>以上分别介绍了伙伴分配算法的C语言的一个经典实现。</p>
+<p>其优点在于快速搜索合并和低外部碎片，但是其缺点在于内部碎片多。</p>
+<h2 id="Netty-中的内存管理"><a href="#Netty-中的内存管理" class="headerlink" title="Netty 中的内存管理"></a>Netty 中的内存管理</h2><p>Netty 中的内存也使用了同样的管理机制。</p>
+<p>（未完。。。。）</p>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ol>
+<li><a href="https://coolshell.cn/articles/10427.html" target="_blank" rel="noopener">伙伴分配器的一个极简实现</a></li>
+<li><a href="https://www.jianshu.com/p/9177b7dabd37" target="_blank" rel="noopener">自顶向下深入分析Netty（十）–PoolThreadCache</a></li>
+</ol>
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2019/08/03/Netty之异步机制/" title="Netty之异步机制" class="prev">上一篇</a><a href="/2019/08/03/Netty之Pipeline/" title="Netty之Pipeline" class="next">下一篇</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

@@ -1,0 +1,238 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.8.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> 设计模式之策略模式 · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="设计模式之策略模式 - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">设计模式之策略模式</h1><div class="post-info">2015-09-03<p class="visit"><i data-identity="2015/09/03/设计模式之策略模式/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><h3 id="含义"><a href="#含义" class="headerlink" title="含义"></a>含义</h3><p>网上一位大神博客里面的话：</p>
+<blockquote>
+<p>策略模式，又叫算法簇模式，就是定义了不同的算法族，并且之间可以互相替换，此模式让算法的变化独立于使用算法的客户。</p>
+</blockquote>
+<p>维基百科里面的定义：</p>
+<blockquote>
+<p>In computer programming, the strategy pattern (also known as the policy pattern) is a software design pattern that enables an algorithm’s behavior <strong>to be selected at runtime</strong>. The strategy pattern defines a family of algorithms, encapsulates each algorithm, and makes the algorithms <strong>interchangeable</strong> within that family. Strategy lets the algorithm vary independently from clients that use it.</p>
+</blockquote>
+<p>翻译过来大意就是：这种设计模式可以使程序在运行时可以选择一种算法。它通过定义一个算法的family，并且封装每一个算法，且使这个family里面的各个算法之间可以相互代替（interchangeable）。这种算法的使用依赖于客户端的使用。</p>
+<h3 id="UML"><a href="#UML" class="headerlink" title="UML"></a>UML</h3><p><img src="http://i.imgur.com/53VwUOh.png" alt></p>
+<p>可以看出来，策略模式的构成很简单，无非是要一个需要构建的对象，和几个具体的策略。</p>
+<h3 id="代码"><a href="#代码" class="headerlink" title="代码"></a>代码</h3><pre><code>package com.ans;
+
+import java.util.ArrayList;
+import java.util.List;
+
+//付费方式
+interface PayStrategy {
+    // 参数是原价,返回实际应付的价钱
+    public double payMoney(double rawPrice);
+}
+
+// 以下是不同策略的实现
+
+// 正常策略
+class NormalStrategy implements PayStrategy {
+    public double payMoney(double rawPrice) {
+        return rawPrice;
+    }
+}
+
+// 节假日八折
+class FestivalStrategy implements PayStrategy {
+    public double payMoney(double rawPrice) {
+        return rawPrice * 0.8;
+    }
+}
+
+// 之后还可以添加 n 中策略...
+
+class AnniversaryStrategy implements PayStrategy {
+    public double payMoney(double rawPrice) {
+        return rawPrice*0.5;
+    }
+}
+
+class Customer {
+    private List&lt;Double&gt; moneyOfDrinks;// 买的东西所花费的钱
+    private PayStrategy pstrategy;
+
+    public Customer(PayStrategy pstrategy) {
+        this.pstrategy = pstrategy;
+        this.moneyOfDrinks = new ArrayList&lt;Double&gt;();
+    }
+
+    // 累加花钱数
+    public void add(double price, int quantity) {
+        moneyOfDrinks.add(pstrategy.payMoney(price * quantity));
+    }
+
+    public void printBill() {
+        double sum = 0;
+        for (Double bills : moneyOfDrinks) {
+            sum += bills;
+        }
+        System.out.println(&quot;总共花费： &quot; + sum);
+    }
+
+    public void setStrategy(PayStrategy pstrategy) {
+        this.pstrategy = pstrategy;
+    }
+
+}
+
+public class TestStrategyPattern {
+    public static void main(String[] args) {
+
+        //第一位顾客
+        Customer customer1 = new Customer(new NormalStrategy());
+        customer1.add(50, 3);
+        customer1.printBill();
+        //现在换了策略了
+        customer1.setStrategy(new FestivalStrategy());
+        customer1.add(50, 2);
+        customer1.printBill();
+
+        //第二位顾客
+        Customer customer2 = new Customer(new NormalStrategy());
+        customer2.add(20, 3);
+        customer2.add(10, 10);
+        customer2.printBill();
+
+        customer2.setStrategy(new FestivalStrategy());
+        customer2.add(10, 10);
+        customer2.printBill();
+
+
+    }
+}
+</code></pre><p>运行结果：</p>
+<pre><code>总共花费： 150.0
+总共花费： 230.0
+总共花费： 160.0
+总共花费： 240.0
+</code></pre></div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2015/09/03/设计模式总览/" title="设计模式总览" class="prev">上一篇</a><a href="/2015/09/03/设计模式之建造者模式/" title="设计模式之建造者模式" class="next">下一篇</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

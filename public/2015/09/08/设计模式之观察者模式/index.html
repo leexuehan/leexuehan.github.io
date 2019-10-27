@@ -1,0 +1,239 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.8.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> 设计模式之观察者模式 · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="设计模式之观察者模式 - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">设计模式之观察者模式</h1><div class="post-info">2015-09-08<p class="visit"><i data-identity="2015/09/08/设计模式之观察者模式/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><h3 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h3><p>观察者定义了一种一对多的关系，让多个观察者对象同时监听某一个主题对象。这个主题对象在状态发生变化时，会通知所有的观察者，使得他们能够自动更新自己。</p>
+<h3 id="结构图"><a href="#结构图" class="headerlink" title="结构图"></a>结构图</h3><p><img src="http://i.imgur.com/YqDXTiZ.png" alt></p>
+<p>可以看到，图中的被观察者也就是通知者，是一个抽象的类或者接口。然后下面实现它的类才是真正的通知者。右边的观察者也是一个抽象，其实现类才是真正被通知的对象。</p>
+<p>同时，通知者应该具有添加和移除观察者的方法，通知事件的方法。观察者接口具有更新状态的方法。</p>
+<h3 id="代码示例"><a href="#代码示例" class="headerlink" title="代码示例"></a>代码示例</h3><pre><code>package com.ans;
+import java.util.*;
+interface Subject {
+    public abstract void Attach(Observer obs);
+    public abstract void Detach(Observer obs);
+    public abstract void Notify(); 
+}
+
+class Monitor implements Subject {
+    private String state;
+    public String getState() {
+        return this.state;
+    }
+
+    public void setState(String newState) {
+        this.state = newState;
+    }
+
+    List&lt;Observer&gt; list = new ArrayList&lt;Observer&gt;();
+    public void Attach(Observer obs) {
+        list.add(obs);
+    }
+
+    public void Detach(Observer obs) {
+        list.remove(obs);
+    }
+
+    public void Notify() {
+        for(Observer obs : list) {
+            obs.update(state);
+        }
+    }
+}
+
+
+abstract class Observer {
+    public abstract void update(String newState);
+}
+
+class Student extends Observer {
+
+    private String name;
+    public Student(String name) {
+        this.name = name;
+    }
+    public String getName() {
+        return this.name;
+    }
+    @Override
+    public void update(String newState) {
+        if(newState.equals(&quot;come&quot;))
+            System.out.println(name + &quot;:老师回来了,赶紧复习&quot;);
+        else if(newState.equals(&quot;go&quot;))
+            System.out.println(name + &quot;:老师走了,起来嗨&quot;);
+    }
+}
+
+public class ObserverTest {
+    public static void main(String[] args) {
+        Monitor mo = new Monitor();
+        Observer stu1 = new Student(&quot;小明&quot;);
+        Observer stu2 = new Student(&quot;小红&quot;);
+
+        mo.Attach(stu1);//添加小明
+        mo.Attach(stu2);//添加小红
+
+        mo.setState(&quot;come&quot;);
+        mo.Notify();
+
+        System.out.println(&quot;============================&quot;);
+        mo.setState(&quot;go&quot;);
+        mo.Notify();
+
+        System.out.println(&quot;============================&quot;);
+        mo.Detach(stu1);//以后不通知小明
+
+        mo.setState(&quot;come&quot;);
+        mo.Notify();
+        System.out.println(&quot;============================&quot;);
+
+        mo.setState(&quot;go&quot;);
+        mo.Notify();
+
+    }
+
+}
+</code></pre><p>运行结果：</p>
+<pre><code>小明:老师回来了,赶紧复习
+小红:老师回来了,赶紧复习
+============================
+小明:老师走了,起来嗨
+小红:老师走了,起来嗨
+============================
+小红:老师回来了,赶紧复习
+============================
+小红:老师走了,起来嗨
+</code></pre><h3 id="优缺点"><a href="#优缺点" class="headerlink" title="优缺点"></a>优缺点</h3><p>观察者与被观察者之间是属于轻度的关联关系，并且是抽象耦合的，这样，对于两者来说都比较容易进行扩展。</p>
+<p>观察者模式是一种常用的触发机制，它形成一条触发链，依次对各个观察者的方法进行处理。</p>
+<p><strong>但同时，这也算是观察者模式一个缺点</strong>，由于是链式触发，当观察者比较多的时候，性能问题是比较令人担忧的。并且，在链式结构中，比较容易<strong>出现循环引用的错误</strong>，造成系统假死。</p>
+<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><p>java语言中，有一个接口Observer，以及它的实现类Observable，对观察者角色常进行了实现。我们可以在jdk的api文档具体查看这两个类的使用方法。</p>
+<p>做过VC++、javascript DOM或者AWT开发的朋友都对它们的事件处理感到神奇，了解了观察者模式，就对事件处理机制的原理有了一定的了解了。如果要设计一个事件触发处理机制的功能，使用观察者模式是一个不错的选择，AWT中的事件处理DEM（委派事件模型Delegation Event Model）就是使用观察者模式实现的。</p>
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2015/09/08/Tomcat原理简述/" title="Tomcat原理简述" class="prev">上一篇</a><a href="/2015/09/07/Http协议概述/" title="Http协议概述" class="next">下一篇</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

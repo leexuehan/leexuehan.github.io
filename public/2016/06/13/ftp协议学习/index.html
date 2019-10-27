@@ -1,0 +1,164 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.8.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> ftp协议学习 · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="ftp协议学习 - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">ftp协议学习</h1><div class="post-info">2016-06-13<p class="visit"><i data-identity="2016/06/13/ftp协议学习/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><h2 id="什么是ftp？"><a href="#什么是ftp？" class="headerlink" title="什么是ftp？"></a>什么是ftp？</h2><p>ftp,即文件传输协议（File Transfer Protocol）。通俗理解就是从服务器上面下载文件或者上传文件的一种协议。和http一样都属于应用层协议，但是ftp比较http协议更为复杂。</p>
+<a id="more"></a>
+<p>他们的底层都建立在TCP/IP传输协议上，但是ftp较为复杂的一点是：它建立了两个TCP链路，一个用来传输命令叫命令链路，另一个用来传输数据，叫数据链路。如下图所示：</p>
+<p><img src="http://o8ahjnaal.bkt.clouddn.com/ftp%E9%93%BE%E8%B7%AF.png" alt></p>
+<h2 id="主动模式和被动模式"><a href="#主动模式和被动模式" class="headerlink" title="主动模式和被动模式"></a>主动模式和被动模式</h2><p>ftp传输方式主要有两种方式：主动模式和被动模式。</p>
+<p>下面分别用两张图来表示这两种模式中，两条TCP链路的建立过程：</p>
+<h3 id="主动模式"><a href="#主动模式" class="headerlink" title="主动模式"></a>主动模式</h3><p><img src="http://o8ahjnaal.bkt.clouddn.com/ftp%E4%B8%BB%E5%8A%A8%E6%A8%A1%E5%BC%8F.jpg" alt></p>
+<p>第1、2步就是建立命令链路的过程,由客户端负责建立，3、4步是建立数据链路的过程，由服务端负责建立。可以看到所谓主动模式就是服务端主动把请求告知客户端某个端口：我已经开了哪些端口，你来连接我吧。客户端链接的一般都是server端的20端口。</p>
+<h3 id="被动模式"><a href="#被动模式" class="headerlink" title="被动模式"></a>被动模式</h3><p><img src="http://o8ahjnaal.bkt.clouddn.com/ftp%E8%A2%AB%E5%8A%A8%E6%A8%A1%E5%BC%8F.jpg" alt></p>
+<p>从图中可以看出来，第1、2步是建立命令链路的过程，3、4步是建立数据链路的过程，两个链路的建立都是由客户端负责建立。可以看到所谓的被动模式就是客户端发送请求到服务端的某个端口，告诉服务端：我已经开放了那些端口，你来链接我吧。而且客户端链接的一般都是server端的高位端口。</p>
+<p>总结以上两种模式就是：在建立命令链路的过程基本相同，建立数据链路的不同，“主动”或者“被动”都是针对服务端而言的，所谓主动模式就是：主动告知对方自己打开了某端口，而被动模式就是：被对方首先告知自己开放了某端口。他们之间建立命令链路的过程是相同的，在建立数据链路的过程中有所区别。</p>
+<p>而且主动模式和被动模式还有另外一个区别就是：server数据链路的端口不一样，前者是20端口，后者是高位端口。</p>
+<p>如果你还没有理解，可以参看下面这段在 stackoverflow 里面的高票回答：</p>
+<blockquote>
+<p>in an active mode configuration, the server will attempt to connect to a random client-side port. So chances are, that port wouldn’t be one of those predefined ports. As a result, an attempt to connect to it will be blocked by the firewall and no connection will be established.</p>
+</blockquote>
+<blockquote>
+<p>A passive configuration will not have this problem since the client will be the one initiating the connection. Of course, it’s possible for the server side to have a firewall too. However, since the server is expected to receive a greater number of connection requests compared to a client, then it would be but logical for the server admin to adapt to the situation and open up a selection of ports to satisfy passive mode configurations.</p>
+</blockquote>
+<blockquote>
+<p>So it would be best for you to configure server to support passive mode FTP. However, passive mode would make your system vulnerable to attacks because clients are supposed to connect to random server ports. Thus, to support this mode, not only should your server have to have multiple ports available, your firewall should also allow connections to all those ports to pass through!</p>
+</blockquote>
+<blockquote>
+<p>To mitigate the risks, a good solution would be to specify a range of ports on your server and then to allow only that range of ports on your firewall.</p>
+</blockquote>
+<p>大意就是：</p>
+<p>主动模式因为是服务端去尝试连接客户端的一个随机的端口，所以很有可能这个随机端口不是预定义好的端口，结果是服务端连接客户端的请求被拒之防火墙外，数据连接建立失败；</p>
+<p>而被动模式则有没有这个问题，因为客户端负责初始化两个连接（命令链路和数据链路），当然也有可能在服务端一侧也有防火墙，但是，由于它是服务器，要接受比客户端多得多的请求，所以服务端一般会打开一系列的端口，去满足被动模式的链接。</p>
+<p>所以，<strong>最好把服务器配置为被动模式</strong>。</p>
+<p>但是这样也会有潜在的风险，这样会使你的系统更易受到攻击，因为客户端要链接服务端的一个随机的端口，所以为了支持这种模式，不仅需要你的服务端的这些端口开放，同时也必须是你的防火墙允许这些请求经过。所以为了减轻风险，最好将你的服务器开放的端口定在一个合适的范围，只有这个范围内的端口才可以开放链接。</p>
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2016/06/19/安卓学习笔记01/" title="安卓学习之系统架构" class="prev">上一篇</a><a href="/2016/06/11/天才在左，疯子在右/" title="思考带给了我们什么？" class="next">下一篇</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

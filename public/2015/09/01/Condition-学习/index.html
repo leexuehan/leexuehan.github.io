@@ -1,0 +1,302 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.8.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> Condition 学习 · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Condition 学习 - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">Condition 学习</h1><div class="post-info">2015-09-01<p class="visit"><i data-identity="2015/09/01/Condition-学习/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><p>二话不说，先上代码。</p>
+<h3 id="代码"><a href="#代码" class="headerlink" title="代码"></a>代码</h3><pre><code>package com.java;
+
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
+public class ConditionStudy {
+    static class NumberWrapper {
+        int value = 1;
+    }
+
+    public static void main(String[] args) {
+        final Lock lock = new ReentrantLock();
+        final Condition reachThreeCondition = lock.newCondition();
+        final Condition reachSixCondition = lock.newCondition();
+        final NumberWrapper num = new NumberWrapper();
+        Thread threadA = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    lock.lock();
+                    System.out.println(&quot;ThreadA starts to write...&quot;);
+                    while (num.value &lt;= 3) {
+                        System.out.println(num.value);
+                        num.value++;
+                    }
+                    reachThreeCondition.signal();//在 A 线程中的 value 大于 3 之后，通过信号量 reachThreeCondition 通知 B 线程
+                } finally {
+                    lock.unlock();
+                }
+
+
+                try {
+                    lock.lock();
+                    reachSixCondition.await();
+                    System.out.println(&quot;ThreadA starts to write...&quot;);
+                    while (num.value &lt;= 9) {
+                        System.out.println(num.value);
+                        num.value++;
+                    }
+
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                } finally {
+                    lock.unlock();
+                }
+
+            }
+        });
+
+        Thread threadB = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    lock.lock();
+                    System.out.println(&quot;ThreadB starts to write...&quot;);
+                    while (num.value &lt;= 3) {
+                        reachThreeCondition.await(); //B 线程在value值大于3之前一直在等 reachThreeCondition 信号量
+                    }
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                } finally {
+                    lock.unlock();
+                }
+
+                try {
+                    lock.lock();
+                    System.out.println(&quot;ThreadB starts to write...&quot;);
+                    while (num.value &lt;= 6) {
+                        System.out.println(num.value);
+                        num.value++;
+                    }
+                    reachSixCondition.signal();
+                } finally {
+                    lock.unlock();
+                }
+            }
+        });
+
+        threadA.start();
+        threadB.start();
+    }
+}
+</code></pre><p>运行结果：</p>
+<pre><code>ThreadA starts to write...
+1
+2
+3
+ThreadB starts to write...
+ThreadB starts to write...
+4
+5
+6
+ThreadA starts to write...
+7
+8
+9
+</code></pre><h3 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h3><p>可以看出来这个程序的目的是让线程 A 和线程 B 接力把 1 到 9 打印出来。<br>而 Condition 就像一个信件一样，起到使两个线程互相沟通的作用。<br>在线程 A 在执行任务时， B 通过 await 方法翘首以盼， A 执行完任务后，通过signal 方法传达到 B线程。<br>以此类推，直到 A 和 B将任务完成。</p>
+<p>上面提到了线程之间如何沟通的问题，但是同时我们知道，要想使两个线程互斥，则必须有锁，所以说lock与Condition之间是分不开的。</p>
+<p>如何通过lock获取锁呢？</p>
+<p>JDK文档里面如是说：</p>
+<blockquote>
+<p>Condition 实例实质上被绑定到一个锁上。要为特定 Lock 实例获得 Condition 实例，请使用其 newCondition() 方法。</p>
+</blockquote>
+<p>上面是网上一位大神写的例子，下面看看在官方给出的例子：</p>
+<pre><code>class BoundedBuffer {
+       final Lock lock = new ReentrantLock();
+       final Condition notFull  = lock.newCondition();//获得两个信号量 
+       final Condition notEmpty = lock.newCondition(); 
+
+       final Object[] items = new Object[100];//开辟一个大小为100的数组
+       int putptr, takeptr, count;//三个分别代表下一个要存放的位置，下一个要取出的位置，目前已经存放的元素总数
+
+       public void put(Object x) throws InterruptedException {
+         lock.lock();
+         try {
+           while (count == items.length) 
+                 notFull.await();//很简单，当满了的时候，就要等“不满”的消息
+           items[putptr] = x; 
+           if (++putptr == items.length) 
+                putptr = 0;
+           ++count;
+           notEmpty.signal();//当有元素存放的时候向take方法发送“已经有了元素”的消息
+         } finally {
+           lock.unlock();
+         }
+       }
+
+       public Object take() throws InterruptedException {
+         lock.lock();
+         try {
+           while (count == 0) 
+                 notEmpty.await();//当元素个数为0的时候，阻塞等待“不空”的消息
+           Object x = items[takeptr]; 
+           if (++takeptr == items.length) 
+                takeptr = 0;
+           --count;
+           notFull.signal(); //当取走一个元素的时候，向put方法发送“不满”消息
+           return x;
+         } finally {
+           lock.unlock();
+         }
+       } 
+ }
+</code></pre><p>很简单的一个例子，但却使用到了几乎所有的并发控制的方法。</p>
+<h3 id="lock-vs-synchronized"><a href="#lock-vs-synchronized" class="headerlink" title="lock vs synchronized"></a>lock vs synchronized</h3><p>这里主要介绍用 lock 和 synchronized 进行同步的区别：</p>
+<p>java.util.concurrent.lock 中的 Lock 框架是锁定的一个抽象，ReentrantLock 类实现了 Lock ，它拥有与 synchronized 相同的并发性和内存语义，<strong>但是添加了类似轮询锁、定时锁等候和可中断锁等候的一些特性。此外，它还提供了在激烈争用情况下更佳的性能。</strong></p>
+<p>1.synchronized 进行同步无法中断一个正在等候获得锁的线程，也无法通过轮询得到锁，如果不想等下去，也就没法得到锁并且同步还要求锁的释放只能在与获得锁所在的堆栈帧相同的堆栈帧中进行。</p>
+<p>2.lock 必须在 finally 块中释放。否则，如果受保护的代码将抛出异常，锁就有可能永远得不到释放！这一点区别看起来可能没什么，但是实际上，它极为重要。忘记在 finally 块中释放锁，可能会在程序中留下一个定时炸弹，当有一天炸弹爆炸时，您要花费很大力气才有找到源头在哪；而使用同步，JVM 将确保锁会获得自动释放。</p>
+<p>3.与目前的 synchronized 实现相比，争用下的 ReentrantLock 实现更具可伸缩性。（在未来的 JVM 版本中，synchronized 的争用性能很有可能会获得提高。）这意味着当许多线程都在争用同一个锁时，使用 ReentrantLock 的总体开支通常要比 synchronized 少得多。</p>
+<p>4.为了在对象上 wait 或 notify ，您必须持有该对象的锁。就像 Lock 是同步的概括一样， Lock 框架包含了对 wait 和 notify 的概括，这个概括叫作 条件（Condition） 。 Lock 对象则充当绑定到这个锁的条件变量的工厂对象，与标准的 wait 和 notify 方法不同，对于指定的 Lock ，可以有不止一个条件变量与它关联。这样就简化了许多并发算法的开发。</p>
+<blockquote>
+<p>例如， 条件（Condition） 的 Javadoc 显示了一个有界缓冲区实现的示例，该示例使用了两个条件变量，“not full”和“not empty”，它比每个 lock 只用一个 wait 设置的实现方式可读性要好一些（而且更有效）。 Condition 的方法与 wait 、 notify 和 notifyAll 方法类似，分别命名为 await 、 signal 和 signalAll ，因为它们不能覆盖 Object 上的对应方法。</p>
+</blockquote>
+<p>5.ReentrantLock 构造器的一个参数是 boolean 值，它允许您选择想要一个 公平（fair）锁，还是一个 不公平（unfair）锁。</p>
+<p>公平锁使线程按照请求锁的顺序依次获得锁；而不公平锁则允许直接获取锁，在这种情况下，线程有时可以比先请求锁的其他线程先得到锁。</p>
+<p>那么同步又如何呢？内置的监控器锁是公平的吗？答案令许多人感到大吃一惊，它们是不公平的，而且永远都是不公平的。</p>
+<p>但是没有人抱怨过线程饥渴，因为 JVM 保证了所有线程最终都会得到它们所等候的锁。确保统计上的公平性，对多数情况来说，这就已经足够了，而这花费的成本则要比绝对的公平保证的低得多。</p>
+<p>所以，默认情况下 ReentrantLock 是“不公平”的，这一事实只是把同步中一直是事件的东西表面化而已。如果您在同步的时候并不介意这一点，那么在 ReentrantLock 时也不必为它担心。</p>
+<h3 id="什么时候使用同步？什么时候使用lock？"><a href="#什么时候使用同步？什么时候使用lock？" class="headerlink" title="什么时候使用同步？什么时候使用lock？"></a>什么时候使用同步？什么时候使用lock？</h3><p>虽然 ReentrantLock 是个非常动人的实现，相对 synchronized 来说，它有一些重要的优势，但是我认为急于把 synchronized 视若敝屣，绝对是个严重的错误。 java.util.concurrent.lock 中的锁定类是用于高级用户和高级情况的工具 。</p>
+<p><strong>一般来说，除非您对 Lock 的某个高级特性有明确的需要，或者有明确的证据（而不是仅仅是怀疑）表明在特定情况下，同步已经成为可伸缩性的瓶颈，否则还是应当继续使用 synchronized。</strong></p>
+<p>因为对于 java.util.concurrent.lock 中的锁定类来说，synchronized 仍然有一些优势。</p>
+<p>比如，在使用 synchronized 的时候，不能忘记释放锁；在退出 synchronized 块时，JVM 会为您做这件事。您很容易忘记用 finally 块释放锁，这对程序非常有害。您的程序能够通过测试，但会在实际工作中出现死锁，那时会很难指出原因（这也是为什么根本不让初级开发人员使用 Lock 的一个好理由。）</p>
+<p>既然如此，我们什么时候才应该使用 ReentrantLock 呢？</p>
+<p>答案非常简单 —— 在确实需要一些 synchronized 所没有的特性的时候，比如时间锁等候、可中断锁等候、无块结构锁、多个条件变量或者轮询锁。 ReentrantLock 还具有可伸缩性的好处，应当在高度争用的情况下使用它，但是请记住，大多数 synchronized 块几乎从来没有出现过争用，所以可以把高度争用放在一边。</p>
+<p>我建议用 synchronized 开发，直到确实证明 synchronized 不合适，而不要仅仅是假设如果使用 ReentrantLock “性能会更好”。</p>
+<p>请记住，这些是供高级用户使用的高级工具。（而且，真正的高级用户喜欢选择能够找到的最简单工具，直到他们认为简单的工具不适用为止。）。一如既往，首先要把事情做好，然后再考虑是不是有必要做得更快。</p>
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2015/09/02/Executor-框架学习/" title="Executor 框架学习" class="prev">上一篇</a><a href="/2015/09/01/二叉树的深度/" title="二叉树的深度" class="next">下一篇</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

@@ -1,0 +1,168 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.8.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> Java 内存回收（一） · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Java 内存回收（一） - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">Java 内存回收（一）</h1><div class="post-info">2015-07-13<p class="visit"><i data-identity="2015/07/13/Java-内存回收（一）/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><p>首先明白一个问题：<strong>这一篇讲得内存回收主要是针对Java堆而言的</strong>，因为栈的内存随着出栈操作自动回收。</p>
+<h3 id="怎样对象是否存活？"><a href="#怎样对象是否存活？" class="headerlink" title="怎样对象是否存活？"></a>怎样对象是否存活？</h3><p>在回收之前必然要判断堆中的对象是否还存活。</p>
+<p>1.引用计数法</p>
+<p>给对象添加一个引用计数器，每当有一个地方引用它时，计数器值加1；当引用失效时，计数器值减去1，当计数器为0时，对象不能再被使用。</p>
+<p>这种算法实现简单，但是缺点太明显。</p>
+<p>记住一句话：<strong>在主流的Java 虚拟机里面没有选取引用计数法来管理内存，其中最主要的原因就在于它的循环引用。</strong></p>
+<p>2.可达性分析算法</p>
+<p>通过一系列的GC Roots的对象作为起点，从这些节点开始向下搜索，当任何一个对象不能通过引用链找到时，就判定为可回收对象。</p>
+<p><strong>这种算法被主流商用语言采用。</strong></p>
+<p>下面是画的一张图，浅绿色表明是仍然存活的对象，因为从GC Roots可以找到这些对象，但是蓝色的对象已经判定为可回收对象，因为无法从根对象寻址到这些对象。</p>
+<p><img src="https://cloud.githubusercontent.com/assets/12984324/8650802/c032bb58-29a7-11e5-9c41-99d004a00e9d.PNG" alt="default"></p>
+<h3 id="关于引用"><a href="#关于引用" class="headerlink" title="关于引用"></a>关于引用</h3><p>分成四类：</p>
+<p>1.强引用：程序代码中普遍存在的，类似”Object obj = new Object()”这类引用。垃圾收集器不会问津这些对象。</p>
+<p>2.软引用：用来描述一些还有用但是并非必须的对象。对于这些对象，系统将要发生内存溢出之前将其回收掉。</p>
+<p>3.弱引用：比软引用更弱，这些对象只能生存到下一次垃圾收集发生之前。</p>
+<p>4.虚引用：最弱，对对象的生存周期不构成影响，设置虚引用的目的是在这个对象被垃圾收集器回收时，收到一个系统通知。</p>
+<h3 id="垃圾收集算法"><a href="#垃圾收集算法" class="headerlink" title="垃圾收集算法"></a>垃圾收集算法</h3><p>下面进入本文的核心内容：垃圾回收算法</p>
+<p>1.标记-清除算法（Mark-Sweep）</p>
+<p><strong>最基础的收集算法，后面的算法都是这种算法的改进。</strong>分为两个阶段：</p>
+<p>标记阶段：标记出所要回收的对象。</p>
+<p>回收阶段：回收所被标记的对象。</p>
+<p>缺点：</p>
+<p>a.效率太低。</p>
+<p>b.内存碎片：标记清除之后产生大量的不连续的内存碎片，导致分配较大的对象时出现空间不够的问题。</p>
+<p>2.复制算法</p>
+<p>将可用内存按照容量划分为大小相等的两块，每次只使用其中的一块，当一块内存用完了，就将还存活着的对象复制到另一块上，然后再把已经使用过的内存空间一次释放。<strong>每次对半个空间进行内存回收</strong>。</p>
+<p>优点：算法简单，运行高效，没有内存碎片。<strong>适用于清理生命周期较短的对象。</strong></p>
+<p>缺点：内存使用率不高，每次只能使用一半内存。</p>
+<p>3.标记压缩算法（Mark-Compact）</p>
+<p>标记过程仍然与“标记-清除”算法一样；然后将所有存活对象都向一端移动，然后直接清理掉端边界之外的内存。</p>
+<p>优点：内存利用率较高，<strong>适用于回收生命周期较长的对象。</strong></p>
+<p>4.<strong>分代收集算法</strong></p>
+<p>当前商业虚拟机垃圾收集采用分代收集（Generation Collection）算法，集上面三种方法之大成。</p>
+<p>根据对象存活周期的不同将内存划分为几块，一般把Java堆分成了新生代和老年代，在新生代对象存活期较短，采用复制算法，老年代对象存活周期较长，则使用“标记-清理”或者“标记-压缩”算法来进行回收。</p>
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2015/07/13/求二进制数字中1的个数/" title="求二进制数字中1的个数" class="prev">上一篇</a><a href="/2015/07/13/打印最大的n位数/" title="打印最大的n位数" class="next">下一篇</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

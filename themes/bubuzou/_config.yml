@@ -1,0 +1,34 @@
+menu:
+    博文: /
+    归档: /archives/
+    生活: /categories/闲聊/
+    技术: /categories/技术/
+    关于: /about/
+
+widgets:
+- category
+- tag
+- tagcloud
+- archive
+
+# count
+show_count: true
+favicon: /images/favicon.ico
+logo: /images/logo.png
+
+# Comment
+# changyan: bubuzou
+leancloud:
+    appid: aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz # 填写您的appid
+    appkey: FdzS5SOPHdhYQoEUngQ8K2QW # 填写您的appkey
+    comment: true # 是否开启评论系统
+    timer: true # 是否开启文章统计
+
+
+# Analytics
+# google-analytics:
+ga: UA-65933410-1
+
+# Copyright Infomation
+startyear: 2016
+

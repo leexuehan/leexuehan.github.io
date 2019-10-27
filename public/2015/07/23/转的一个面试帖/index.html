@@ -1,0 +1,142 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.8.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> 转的一个面试帖 · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="转的一个面试帖 - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">转的一个面试帖</h1><div class="post-info">2015-07-23<p class="visit"><i data-identity="2015/07/23/转的一个面试帖/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><h3 id="java基础"><a href="#java基础" class="headerlink" title="java基础"></a>java基础</h3><p>hashmap面试官最喜欢考，一定要搞明白原理。<br>treemap知道就可以，应该没人闲的蛋疼考红黑树。<br>threadlocal面试官也喜欢考，要搞明白原理<br>反射、动态代理、ioc、aop复习下吧，几乎必考<br>nio、aio几乎都会问，抽空写写例程，知道netty mina<br>class loader: 知道双亲委派，如果知道tomcat、jetty class loader异同更佳 </p>
+<h3 id="gc"><a href="#gc" class="headerlink" title="gc"></a>gc</h3><p>gc很多面试官都喜欢考<br>面试前背熟各种gc算法的区别，理解原理。<br>G1很多面试官自己都不明白，没时间就不用管。 </p>
+<h3 id="高并发"><a href="#高并发" class="headerlink" title="高并发"></a>高并发</h3><p>传统IT一般接触不到高并发，不过没关系按下面说的做，应付面试问题不大<br>把java.util.concurrent下面所有的包和类通读一遍，理解原理、记住核心代码、写例程，网上有很多concurrent相关类原理解析的文章，对着文章看源代码理解起来问题不大。<br>有些类代码很复杂比如aqs，看不明白就算了，也不用太花功夫，记住原理即可，因为大部分面试官也不明白。<br>一定要写例程，例程最好跟你的业务能扯上一点点关系，这样面试的时候就是你实际项目里面的代码了。<br>面试官喜欢考的类有：ConcurrentHashMap、读写锁、Condition、线程池、Barrier、CountDownLatch、Callable、BlockingQueue </p>
+<h3 id="hdfs和mr"><a href="#hdfs和mr" class="headerlink" title="hdfs和mr"></a>hdfs和mr</h3><p>传统IT一般也接触不到，如果不想准备就算了，如果想准备的话，就在自己的开发机上撘3个linux虚机， 按照网上的教程自己一步一步撘一个hadoop环境出来，然后找几个实际业务中生成出来的log，写几个mr程序处理一下。<br>面试的时候就可以很谦虚的说，实际项目里面用过，但是用的不多 </p>
+<h3 id="application-server"><a href="#application-server" class="headerlink" title="application server"></a>application server</h3><p>websphere、weblogic、jboss之类的就不用准备了，应该没人问你这些啦。<br>有时间的话，看看tomcat和jetty的源代码，重点看线程模型和io，这将是一个很好的加分项 </p>
+<h3 id="数据库"><a href="#数据库" class="headerlink" title="数据库"></a>数据库</h3><p>oracle、sybase、db2不会有人关心了，如果之前没用过mysql的话，找本介绍innodb原理的书好好通读一遍吧。<br>理解myisam和innodb的区别<br>理解关系型数据库索引的原理，理解一些简单的索引优化的原则。<br>面试官很喜欢给出一堆where子句，考索引、复合索引什么情况下起作用 </p>
+<h3 id="缓存"><a href="#缓存" class="headerlink" title="缓存"></a>缓存</h3><p>一致性哈希很多面试官喜欢考，提前准备下吧。 </p>
+<h3 id="ssh框架"><a href="#ssh框架" class="headerlink" title="ssh框架"></a>ssh框架</h3><p>这些没搞过就没搞过吧，这种框架层面的东西，对于一个有经验的java码农，学起来也就是分分钟的事情。<br>不过你也可以说这些我没用过，但是我知道原理，然后说一堆动态代理、cglib的原理出来，也是加分。 </p>
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2015/07/23/对象的发布和逸出/" title="对象的发布和逸出" class="prev">上一篇</a><a href="/2015/07/23/DeadLock/" title="DeadLock" class="next">下一篇</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

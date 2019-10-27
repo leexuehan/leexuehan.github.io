@@ -1,0 +1,515 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.8.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> ThreadPool 之学习 · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="ThreadPool 之学习 - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">ThreadPool 之学习</h1><div class="post-info">2015-08-19<p class="visit"><i data-identity="2015/08/19/ThreadPool-之学习/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><h2 id="什么是线程池"><a href="#什么是线程池" class="headerlink" title="什么是线程池"></a>什么是线程池</h2><p>通常情况下，我们使用线程的时候就去new一个线程，这样实现起来非常简便，但是就会有一个问题：</p>
+<p>在高并发且并发任务执行时间较短的情况下，频繁创建和销毁线程的成本太高，这涉及到一个线程</p>
+<p>如果并发的线程数量很多，并且每个线程都是执行一个时间很短的任务就结束了，这样频繁创建线程就会大大降低系统的效率，因为频繁创建线程和销毁线程需要时间。由于Java线程依赖于操作系统内核线程，所以线程创建需要切换到<strong>内核态</strong>，创建和销毁的消耗比较大。 </p>
+<p>另外线程属于稀缺资源，不能无限制的创建，通过线程池可以进行统一的创建和监控。 遇到了性能瓶颈，吞吐量上不去的时候，并不是一味的加大线程数就能提高性能，线程达到一定的程度，上下文切换会消耗很大的CPU，并且可能是在做无用功。</p>
+<p>那么有没有一种办法使得线程可以复用，就是执行完一个任务，并不被销毁，而是可以继续执行其他的任务？</p>
+<p>在Java中可以通过线程池来达到这样的效果。</p>
+<h3 id="使用线程池的好处？"><a href="#使用线程池的好处？" class="headerlink" title="使用线程池的好处？"></a>使用线程池的好处？</h3><ol>
+<li><p>减少了创建和销毁线程的次数，每个工作线程都可以被重复利用，可执行多个任务。</p>
+</li>
+<li><p>可以根据系统的承受能力，调整线程池中工作线线程的数目，防止因为消耗过多的内存，而把服务器累趴下(每个线程需要大约1MB内存，线程开的越多，消耗的内存也就越大，最后死机)。</p>
+</li>
+</ol>
+<h3 id="线程池怎么使用？"><a href="#线程池怎么使用？" class="headerlink" title="线程池怎么使用？"></a>线程池怎么使用？</h3><p>Java通过Executors提供四种线程池，分别为：</p>
+<ul>
+<li><strong>newCachedThreadPool</strong>     创建一个可缓存线程池，如果线程池长度超过处理需要，可灵活回收空闲线程（一般情况下如果一个线程有60s没有被使用，则回收之），若无可回收，则新建线程。对于线程池的长度并没有任何限制。</li>
+<li><strong>newFixedThreadPool</strong>      创建一个定长线程池，可控制线程最大并发数，超出的线程会在队列中等待。</li>
+<li><strong>newScheduledThreadPool</strong>  创建一个定长线程池，支持定时及周期性任务执行。</li>
+<li><strong>newSingleThreadExecutor</strong> 创建一个单线程化的线程池，它只会用唯一的工作线程来执行任务，保证所有任务按照指定顺序(FIFO, LIFO, 优先级)执行。</li>
+</ul>
+<h4 id="线程池的创建"><a href="#线程池的创建" class="headerlink" title="线程池的创建"></a>线程池的创建</h4><p>创建一个线程池需要的参数：</p>
+<p><strong>corePoolSize</strong>（线程池的基本大小）：当提交一个任务到线程池时，线程池会创建一个线程来执行任务，即使其他空闲的基本线程能够执行新任务也会创建线程，<strong>等到需要执行的任务数大于线程池基本大小时就不再创建</strong>。如果调用了线程池的prestartAllCoreThreads方法，线程池会提前创建并启动所有基本线程。</p>
+<p><strong>runnableTaskQueue</strong>（任务队列）：用于保存等待执行的任务的阻塞队列。 可以选择以下几个阻塞队列。</p>
+<ul>
+<li>ArrayBlockingQueue：是一个基于数组结构的有界阻塞队列，此队列按 FIFO（先进先出）原则对元素进行排序。</li>
+<li>LinkedBlockingQueue：一个基于链表结构的阻塞队列，此队列按FIFO （先进先出） 排序元素，吞吐量通常要高于ArrayBlockingQueue。静态工厂方法Executors.newFixedThreadPool()使用了这个队列。</li>
+<li>SynchronousQueue：一个不存储元素的阻塞队列。每个插入操作必须等到另一个线程调用移除操作，否则插入操作一直处于阻塞状态，吞吐量通常要高于LinkedBlockingQueue，静态工厂方法Executors.newCachedThreadPool使用了这个队列。</li>
+<li>PriorityBlockingQueue：一个具有优先级的无限阻塞队列。</li>
+</ul>
+<p><strong>maximumPoolSize</strong>（线程池最大大小）：<strong>线程池允许创建的最大线程数</strong>。如果队列满了，并且已创建的线程数小于最大线程数，则线程池会再创建新的线程执行任务。值得注意的是如果使用了无界的任务队列这个参数就没什么效果。</p>
+<p><strong>ThreadFactory</strong>：用于设置创建线程的工厂，可以通过线程工厂给每个创建出来的线程设置更有意义的名字。</p>
+<p><strong>RejectedExecutionHandler</strong>（饱和策略）：<strong>当队列和线程池都满了</strong>，说明线程池处于饱和状态，那么必须采取一种策略处理提交的新任务。这个策略默认情况下是AbortPolicy，表示无法处理新任务时抛出异常。</p>
+<p><strong>keepAliveTime</strong>（线程活动保持时间）：线程池的工作线程空闲后，保持存活的时间。所以如果任务很多，并且每个任务执行的时间比较短，可以调大这个时间，提高线程的利用率。</p>
+<p><strong>TimeUnit</strong>（线程活动保持时间的单位）：可选的单位有天（DAYS），小时（HOURS），分钟（MINUTES），毫秒(MILLISECONDS)，微秒(MICROSECONDS, 千分之一毫秒)和毫微秒(NANOSECONDS, 千分之一微秒)。</p>
+<h4 id="线程池的状态"><a href="#线程池的状态" class="headerlink" title="线程池的状态:"></a>线程池的状态:</h4><p>RUNNING: 接受新任务，执行队列中的任务。 </p>
+<p>SHUTDOWN: 不接受新任务，但是执行队列中的任务。RUNNING-&gt;SHUTDOWN，调用shutdown()方法。 </p>
+<p>STOP:不接受新任务，不执行队列中的任务，并终止正在执行的任务。RUNNING或者SHUTDOWN-&gt;STOP，调用shutdownNow()方法。 </p>
+<p>TERMIANTED:同STOP，但是所有线程已经terminated。 </p>
+<p>线程池一定要记得shutdown(),这就跟创建了数据库资源finally中记得关闭一样，如Connection ResultSet PreparedStatement Statement，还有文件，网络socket对象，创建后都要记得关闭。 </p>
+<h4 id="向线程池提交任务"><a href="#向线程池提交任务" class="headerlink" title="向线程池提交任务"></a>向线程池提交任务</h4><p>我们可以使用execute提交的任务，但是execute方法没有返回值，所以无法判断任务是否被线程池执行成功。</p>
+<pre><code>threadsPool.execute(new Runnable() {
+    @Override
+    public void run() {
+        // TODO Auto-generated method stub
+    }
+});
+</code></pre><p>我们也可以使用submit 方法来提交任务，它会返回一个future,那么我们可以通过这个future来判断任务是否执行成功，通过future的get方法来获取返回值，get方法会阻塞住直到任务完成，而使用get(long timeout, TimeUnit unit)方法则会阻塞一段时间后立即返回，这时有可能任务没有执行完。</p>
+<pre><code>Future&lt;Object&gt; future = executor.submit(harReturnValuetask);
+try {
+     Object s = future.get();
+} catch (InterruptedException e) {
+    // 处理中断异常
+} catch (ExecutionException e) {
+    // 处理无法执行任务异常
+} finally {
+    // 关闭线程池
+    executor.shutdown();
+}
+</code></pre><h4 id="关闭线程池"><a href="#关闭线程池" class="headerlink" title="关闭线程池"></a>关闭线程池</h4><p>我们可以通过调用线程池的<strong>shutdown或shutdownNow</strong>方法来关闭线程池。</p>
+<p>它们的原理是<strong>遍历</strong>线程池中的工作线程，然后逐个调用线程的interrupt方法来中断线程，所以无法响应中断的任务可能永远无法终止。</p>
+<p>但是它们存在一定的区别，shutdownNow首先将线程池的状态设置成STOP，然后尝试停止所有的正在执行或暂停任务的线程，并返回等待执行任务的列表，而shutdown只是将线程池的状态设置成SHUTDOWN状态，然后中断所有没有正在执行任务的线程。</p>
+<p>只要调用了这两个关闭方法的其中一个，isShutdown方法就会返回true。</p>
+<p>当所有的任务都已关闭后,才表示线程池关闭成功，这时调用isTerminaed方法会返回true。</p>
+<p>至于我们应该调用哪一种方法来关闭线程池，应该由提交到线程池的任务特性决定。</p>
+<p>通常调用shutdown来关闭线程池，如果任务不一定要执行完，则可以调用shutdownNow。</p>
+<h3 id="线程池的主要处理流程"><a href="#线程池的主要处理流程" class="headerlink" title="线程池的主要处理流程"></a>线程池的主要处理流程</h3><p><img src="http://i.imgur.com/qMHjM9S.png" alt></p>
+<p>从上图我们可以看出，当提交一个新任务到线程池时，线程池的处理流程如下：</p>
+<p>首先线程池判断<strong>基本线程池（corePoolSize）</strong>是否已满？没满，创建一个工作线程来执行任务。满了，则进入下个流程。<br>其次线程池判断<strong>工作队列(workQueue)</strong>是否已满？没满，则将新提交的任务存储在工作队列里。满了，则进入下个流程。<br>最后线程池判断<strong>整个线程池(maximumPoolSize)</strong>是否已满？没满，则创建一个新的工作线程来执行任务，满了，则交给饱和策略来处理这个任务。</p>
+<h4 id="拒绝策略"><a href="#拒绝策略" class="headerlink" title="拒绝策略"></a>拒绝策略</h4><p>ThreadPoolExecutor中有几个实现RejectedExecutionHandler的内部类： </p>
+<p>AbortPolicy: 这个比较暴力，直接抛异常，拒绝执行。 </p>
+<p>DiscardPolicy:这个是个空实现，直接丢弃。 </p>
+<p>DiscardOldestPolicy:丢弃队列中的已有的，执行新来的。喜新厌旧啊这个。 </p>
+<p>CallerRunsPolicy: 使用调用者线程执行任务。 </p>
+<h3 id="说说-Executor"><a href="#说说-Executor" class="headerlink" title="说说 Executor"></a>说说 Executor</h3><p>下面是Executor 的源码，可以看出来只有一个 execute 方法。</p>
+<pre><code>public interface Executor {
+
+    /**
+     * Executes the given command at some time in the future.  The command
+     * may execute in a new thread, in a pooled thread, or in the calling
+     * thread, at the discretion of the &lt;tt&gt;Executor&lt;/tt&gt; implementation.
+     *
+     * @param command the runnable task
+     * @throws RejectedExecutionException if this task cannot be
+     * accepted for execution.
+     * @throws NullPointerException if command is null
+     */
+    void execute(Runnable command);
+}
+</code></pre><p>主要作用：执行已提交的 Runnable 任务的对象。</p>
+<p>此接口提供一种将任务提交与每个任务将如何运行的机制（包括线程使用的细节、调度等）分离开来的方法。</p>
+<p>通常使用 Executor 而不是显式地创建线程。</p>
+<p>例如，可能会使用以下方法，而不是为一组任务中的每个任务调用 new Thread(new(RunnableTask())).start()：</p>
+<pre><code>Executor executor = anExecutor;
+executor.execute(new RunnableTask1());
+executor.execute(new RunnableTask2());
+...
+</code></pre><h4 id="ExecutorService"><a href="#ExecutorService" class="headerlink" title="ExecutorService"></a>ExecutorService</h4><pre><code>public interface ExecutorService extends Executor {
+    ...
+}
+</code></pre><p>下面是 ExecutorService的 API。</p>
+<p><img src="http://i.imgur.com/4AvhIGM.png" alt></p>
+<p>部分重要的方法介绍：</p>
+<ul>
+<li>boolean    <strong>isShutdown</strong>() ： 如果此执行程序已关闭，则返回 true。</li>
+</ul>
+<ul>
+<li><p>boolean    <strong>isTerminated</strong>() : 如果关闭后所有任务都已完成，则返回 true。</p>
+</li>
+<li><p>void    <strong>shutdown</strong>() : 启动一次顺序关闭，执行以前提交的任务，但不接受新任务。</p>
+</li>
+</ul>
+<ul>
+<li>List<runnable>    <strong>shutdownNow</strong>() :试图停止所有正在执行的活动任务，暂停处理正在等待的任务，并返回等待执行的任务列表。</runnable></li>
+</ul>
+<ul>
+<li>Future&lt;?&gt;    <strong>submit</strong>(Runnable task) : 提交一个 Runnable 任务用于执行，并返回一个表示该任务的 Future。</li>
+</ul>
+<h4 id="ThreadPoolExecutor"><a href="#ThreadPoolExecutor" class="headerlink" title="ThreadPoolExecutor"></a>ThreadPoolExecutor</h4><p>实现了上面的 ExecutorService 接口。</p>
+<p><strong>创建</strong>：</p>
+<p><img src="http://i.imgur.com/iYlj4Gb.png" alt></p>
+<p>以上是 ThreadPoolExecutor 的重载构造函数。</p>
+<p>参数的含义分别是：</p>
+<pre><code>corePoolSize - 池中所保存的线程数，包括空闲线程。
+maximumPoolSize - 池中允许的最大线程数。
+keepAliveTime - 当线程数大于核心时，此为终止前多余的空闲线程等待新任务的最长时间。
+unit - keepAliveTime 参数的时间单位。
+workQueue - 执行前用于保持任务的队列。此队列仅保持由 execute 方法提交的 Runnable 任务。
+threadFactory - 执行程序创建新线程时使用的工厂。
+handler - 由于超出线程范围和队列容量而使执行被阻塞时所使用的处理程序。
+</code></pre><p><strong>源码分析</strong>：</p>
+<p>execute 方法的源码：</p>
+<pre><code>public void execute(Runnable command) {
+    if (command == null)
+        throw new NullPointerException();
+    //如果小于corePoolSize，就通过 addIfUnderCorePoolSize 创建新的线程来处理任务 
+    if (poolSize &gt;= corePoolSize || !addIfUnderCorePoolSize(command)) {
+        //如果大于corePoolSize，则优先放入队列中。 
+        //workQueue 是一个 BlockingQueue;
+        if (runState == RUNNING &amp;&amp; workQueue.offer(command)) {
+            if (runState != RUNNING || poolSize == 0)
+                ensureQueuedTaskHandled(command);
+        }
+        else if (!addIfUnderMaximumPoolSize(command))
+            reject(command); // is shutdown or saturated
+    }
+}
+
+private boolean addIfUnderCorePoolSize(Runnable firstTask) {
+    Thread t = null;
+    final ReentrantLock mainLock = this.mainLock;
+    mainLock.lock();
+    try {
+        if (poolSize &lt; corePoolSize &amp;&amp; runState == RUNNING)
+            //创建新的线程 
+            t = addThread(firstTask);
+    } finally {
+        mainLock.unlock();
+    }
+    if (t == null)
+        return false;
+    t.start();
+    return true;
+}
+
+private Thread addThread(Runnable firstTask) {
+    Worker w = new Worker(firstTask);
+    Thread t = threadFactory.newThread(w);
+    if (t != null) {
+        w.thread = t;
+        workers.add(w);
+        int nt = ++poolSize;
+        if (nt &gt; largestPoolSize)
+            largestPoolSize = nt;
+    }
+    return t;
+}
+</code></pre><p>注意这里的 addThread 方法，很关键。Worker对象是一个 Runnable 接口，而细看源码会发现，Thread 对象 t 是由 ThreadFactory 的newThread 方法产生的，而该方法的作用只是给 Thread 改了个名字而已。<br>workers 是一个 HashSet。将包装后的 Thread 加入集合中。</p>
+<p>而在 addThread 方法外部，调用了 Thread的 start 方法，那么 Worker 的 run() 方法是什么样的呢？</p>
+<pre><code>public void run() {  
+     try {  
+         Runnable task = firstTask;  
+         firstTask = null;  
+         while (task != null || (task = getTask()) != null) {  
+             runTask(task);  
+             task = null;  
+         }  
+     } finally {  
+         workerDone(this);  
+     }  
+ }  
+</code></pre><p>可以看到其中有一个关键的方法就是 getTask() 方法，可以看一下它的源码：</p>
+<pre><code>Runnable getTask() {
+    for (;;) {
+        try {
+            int state = runState;
+            if (state &gt; SHUTDOWN)
+                return null;
+            Runnable r;
+            if (state == SHUTDOWN)  // Help drain queue
+                r = workQueue.poll();
+            else if (poolSize &gt; corePoolSize || allowCoreThreadTimeOut)
+                r = workQueue.poll(keepAliveTime, TimeUnit.NANOSECONDS);
+            else
+                r = workQueue.take();
+            if (r != null)
+                return r;
+            if (workerCanExit()) {
+                if (runState &gt;= SHUTDOWN) // Wake up others
+                    interruptIdleWorkers();
+                return null;
+            }
+            // Else retry
+        } catch (InterruptedException ie) {
+            // On interruption, re-check runState
+        }
+    }
+}
+</code></pre><p>可以看出来，此方法的作用：</p>
+<p>如果线程池的状态不是 RUNNING 或者 SHUTDOWN,则返回。</p>
+<p>如果线程池的状态是 SHUTDOWN， 则意味着线程池不接受新的任务，则从 workQueue 这个 BlockingQueue 中取出线程来执行；</p>
+<p>如果线程池的状态是 RUNNING，则使用 take 方法取出线程来执行任务。</p>
+<p>总而言之，是从阻塞队列中取出线程，后面再通过 runTask() 方法来执行任务。</p>
+<p>关于ensureQueuedTaskHandled 源码注释上是这么写的：</p>
+<blockquote>
+<p>Rechecks state after queuing a task. Called from execute when<br>pool state has been observed to change after queuing a task. If<br>the task was queued concurrently with a call to shutdownNow,<br>and is still present in the queue, this task must be removed<br>and rejected to preserve shutdownNow guarantees.  Otherwise,<br>this method ensures (unless addThread fails) that there is at<br>least one live thread to handle this task</p>
+</blockquote>
+<pre><code>private void ensureQueuedTaskHandled(Runnable command) {
+    final ReentrantLock mainLock = this.mainLock;
+    mainLock.lock();
+    boolean reject = false;
+    Thread t = null;
+    try {
+        int state = runState;
+        if (state != RUNNING &amp;&amp; workQueue.remove(command))
+            reject = true;
+        else if (state &lt; STOP &amp;&amp;
+                 poolSize &lt; Math.max(corePoolSize, 1) &amp;&amp;
+                 !workQueue.isEmpty())
+            t = addThread(null);
+    } finally {
+        mainLock.unlock();
+    }
+    if (reject)
+        reject(command);
+    else if (t != null)
+        t.start();
+}
+</code></pre><h3 id="有关使用-ThreadPool的两个例子"><a href="#有关使用-ThreadPool的两个例子" class="headerlink" title="有关使用 ThreadPool的两个例子"></a>有关使用 ThreadPool的两个例子</h3><p>例子一：</p>
+<pre><code>package com.java;
+
+import java.util.concurrent.*;
+
+public class JavaStudy {
+    public static void main(String[] args) {
+        // ExecutorService es = Executors.newCachedThreadPool();
+        // ExecutorService es = Executors.newSingleThreadExecutor();
+        ExecutorService es = Executors.newFixedThreadPool(2);
+
+        for (int i = 0; i &lt; 5; i++) {
+            es.execute(new TestRunnable());
+            System.out.println(&quot;***********a&quot; + i + &quot;**************&quot;);
+        }
+
+        es.shutdown();
+    }
+}
+
+class TestRunnable implements Runnable {
+    @Override
+    public void run() {
+        System.out.println(Thread.currentThread().getName() + &quot;线程被调用了&quot;);
+    }
+}
+</code></pre><p>例子二：</p>
+<pre><code>package com.java;
+
+import java.util.concurrent.*;
+import java.util.*;
+
+public class JavaStudy {
+public static void main(String[] args) {
+    ExecutorService es = Executors.newCachedThreadPool();
+    // ExecutorService es = Executors.newSingleThreadExecutor();
+    //ExecutorService es = Executors.newFixedThreadPool(5);
+    List&lt;Future&lt;String&gt;&gt; list = new ArrayList&lt;Future&lt;String&gt;&gt;();
+
+    for (int i = 0; i &lt; 20; i++) {
+        Future&lt;String&gt; result = es.submit(new TestCallable(i));//注意在使用 Callable 对象作为参数时，只能使用 submit 方法。
+        list.add(result);
+    }
+
+    for(Future&lt;String&gt; res: list) {
+        try {
+            while(!res.isDone())
+                ;
+            System.out.println(res.get());
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        } finally {
+            es.shutdown();
+        }
+    }
+}
+}
+
+class TestCallable implements Callable&lt;String&gt; {
+
+    int id;
+    public TestCallable(int id) {
+        this.id = id;
+    }
+    @Override 
+    public String call() throws Exception{
+        System.out.println(Thread.currentThread().getName() + &quot;线程被调用了&quot;);
+        return Thread.currentThread().getName() + &quot;线程被调用了, 返回结果 &quot; + id;
+    }
+}
+</code></pre><p>运行结果：</p>
+<pre><code>pool-1-thread-1线程被调用了
+pool-1-thread-1线程被调用了, 返回结果 0
+pool-1-thread-3线程被调用了
+pool-1-thread-5线程被调用了
+pool-1-thread-7线程被调用了
+pool-1-thread-9线程被调用了
+pool-1-thread-11线程被调用了
+pool-1-thread-13线程被调用了
+pool-1-thread-15线程被调用了
+pool-1-thread-17线程被调用了
+pool-1-thread-19线程被调用了
+pool-1-thread-2线程被调用了
+pool-1-thread-2线程被调用了, 返回结果 1
+pool-1-thread-3线程被调用了, 返回结果 2
+pool-1-thread-4线程被调用了
+pool-1-thread-4线程被调用了, 返回结果 3
+pool-1-thread-5线程被调用了, 返回结果 4
+pool-1-thread-6线程被调用了
+pool-1-thread-6线程被调用了, 返回结果 5
+pool-1-thread-7线程被调用了, 返回结果 6
+pool-1-thread-8线程被调用了
+pool-1-thread-8线程被调用了, 返回结果 7
+pool-1-thread-9线程被调用了, 返回结果 8
+pool-1-thread-10线程被调用了
+pool-1-thread-10线程被调用了, 返回结果 9
+pool-1-thread-11线程被调用了, 返回结果 10
+pool-1-thread-12线程被调用了
+pool-1-thread-12线程被调用了, 返回结果 11
+pool-1-thread-13线程被调用了, 返回结果 12
+pool-1-thread-14线程被调用了
+pool-1-thread-14线程被调用了, 返回结果 13
+pool-1-thread-16线程被调用了
+pool-1-thread-15线程被调用了, 返回结果 14
+pool-1-thread-16线程被调用了, 返回结果 15
+pool-1-thread-18线程被调用了
+pool-1-thread-17线程被调用了, 返回结果 16
+pool-1-thread-18线程被调用了, 返回结果 17
+pool-1-thread-19线程被调用了, 返回结果 18
+pool-1-thread-20线程被调用了
+pool-1-thread-20线程被调用了, 返回结果 19
+</code></pre><p>例子三</p>
+<pre><code>        package com.java;        
+import java.util.concurrent.*;        
+public class JavaStudy {
+    public static void main(String[] args) {
+        BlockingQueue&lt;Runnable&gt; bq = new ArrayBlockingQueue&lt;Runnable&gt;(20);
+
+        ThreadPoolExecutor pool = new ThreadPoolExecutor(3, 5, 50,
+                TimeUnit.MILLISECONDS, bq);
+        for(int i = 0; i &lt; 5; i++) {
+            Runnable t = new TestRunnable();
+            pool.execute(t);
+        }
+
+        pool.shutdown();
+</code></pre><p>​<br>            }<br>        }</p>
+<pre><code>class TestRunnable implements Runnable {
+    @Override
+    public void run() {
+        System.out.println(Thread.currentThread().getName() + &quot;线程被调用了&quot;);
+    }
+}
+</code></pre></div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2015/08/19/MyISAM-和-InnoDB-的区别/" title="MyISAM 和 InnoDB 的区别" class="prev">上一篇</a><a href="/2015/08/18/BlockingQueue-学习/" title="BlockingQueue 学习" class="next">下一篇</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

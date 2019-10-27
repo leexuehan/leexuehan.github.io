@@ -1,0 +1,170 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.8.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> JVM的体系 · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="JVM的体系 - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">JVM的体系</h1><div class="post-info">2015-07-12<p class="visit"><i data-identity="2015/07/12/JVM的体系/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><h2 id="需要了解的背景知识"><a href="#需要了解的背景知识" class="headerlink" title="需要了解的背景知识"></a>需要了解的背景知识</h2><p>一个计算机体系可以分为哪几个部分？</p>
+<p>1.指令集：与计算机硬件直接打交道的机器语言的命令集合。</p>
+<p>2.计算单元：识别并控制指令执行的功能模块。</p>
+<p>3.寻址方式：地址的位数，最小地址和最大地址范围以及地址的运行规则。</p>
+<p>4.寄存器定义：操作数寄存器，变址寄存器，控制寄存器的定义数量和使用方式。</p>
+<p>5.存储单元：存储操作数和保存操作结构的单元。</p>
+<blockquote>
+<p>操作数指的是指令执行的参与者，各种操作的对象。</p>
+</blockquote>
+<blockquote>
+<p>指令集以二进制的方式储存于计算机中，主流的体系结构上分为精简指令集和复杂指令集。x86架构的CPU都使用复杂指令集。</p>
+</blockquote>
+<p>JVM和实体机的关系</p>
+<p>1.关于JVM 目前只有一个规范，规定了它有哪些组成部分。</p>
+<p>2.具体的实现依赖于不同的厂商的实现方式。</p>
+<p>3.JVM运行一个Java程序时，就是一个运行中的实例，每个运行中的Java程序都是一个JVM实例。</p>
+<p>JVM的指令集？</p>
+<p>JVM作为一个虚拟机，自然也有自己的指令集，称之为JVM字节码指令集。</p>
+<h2 id="JVM体系"><a href="#JVM体系" class="headerlink" title="JVM体系"></a>JVM体系</h2><h3 id="四部分："><a href="#四部分：" class="headerlink" title="四部分："></a>四部分：</h3><p>1.类加载器：在JVM启动时或者类运行时将class加载到JVM中。</p>
+<p>2.执行引擎：相当于实体机的CPU，负责执行JVM指令集。</p>
+<p>3.内存区</p>
+<p>4.本地方法调用：调用C或者C++实现的本地方法代码返回结果。</p>
+<h3 id="工作机制："><a href="#工作机制：" class="headerlink" title="工作机制："></a>工作机制：</h3><h4 id="机器怎样执行代码"><a href="#机器怎样执行代码" class="headerlink" title="机器怎样执行代码"></a>机器怎样执行代码</h4><blockquote>
+<p>程序从编译到执行的七个阶段：</p>
+<p>source code –preprocessor –compiler —&gt;assembler —&gt;object code—&gt;linker—&gt;executables</p>
+</blockquote>
+<p><strong>不管是何种指令集，最终都会只有基本的元素：加、减、乘、取余、求模。而这几种运算都会分解成位运算：与、或、异或。这些运算又通过指令来完成，指令的核心目的就在于确定运算的种类（操作码）和运算需要的数据（操作数）以及去哪里（寄存器或者栈）获取操作数，将结果存放到什么地方（寄存器或者栈）。</strong></p>
+<h4 id="执行引擎的架构"><a href="#执行引擎的架构" class="headerlink" title="执行引擎的架构"></a>执行引擎的架构</h4><p>JVM执行字节码指令是<strong>基于栈</strong>的架构的。所有操作数必须先入栈，然后根据指令中的操作码从栈顶弹出若干个元素进行计算后再将结果压入栈中。</p>
+<blockquote>
+<p>JVM操作数存放在每个栈帧中的一个本地变量集中，在每个方法调用时就会给这个方法分配一个本地变量集，这个变量集在编译时就已经确定了。</p>
+<p>基于<strong>寄存器</strong>的架构：引擎从寄存器取出操作数进行运算之后，然后将结果返回到寄存器中。</p>
+</blockquote>
+<blockquote>
+<p>看起来好像基于寄存器的架构比较好一点，那为什么JVM要采用基于栈的架构呢？理由有二：一、JVM要设计成为与平台无关的，这就需要考虑平台上没有寄存器或者有很少的寄存器的情况；二，为了指令更加紧凑。但是由于访问内存的速度是一个瓶颈，所以基于栈的结构在理论上来说不如基于寄存器的架构更为快捷。</p>
+</blockquote>
+<p>每当创建一个线程时，JVM会为这个线程创建一个Java栈，同时为这个栈分配一个PC寄存器，这个PC寄存器指向这个线程的第一行可执行代码。而因为每个线程都不只是一个方法，还可能再调用其他方法，每调用一个方法都会产生一个<strong>栈帧</strong>的数据结构。这个栈帧保留了一下这个方法的元信息，如在这个方法中定义的局部变量，正常方法返回以及异常处理机制等。</p>
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2015/07/12/Java内存模型（一）/" title="Java内存模型（一）" class="prev">上一篇</a><a href="/2015/07/11/一点反思/" title="一点反思" class="next">下一篇</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

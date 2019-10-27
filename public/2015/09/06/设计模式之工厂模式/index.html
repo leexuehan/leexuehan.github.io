@@ -1,0 +1,329 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.8.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> 设计模式之工厂模式 · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="设计模式之工厂模式 - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">设计模式之工厂模式</h1><div class="post-info">2015-09-06<p class="visit"><i data-identity="2015/09/06/设计模式之工厂模式/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><h3 id="简单工厂模式-Simple-Factory-Pattern"><a href="#简单工厂模式-Simple-Factory-Pattern" class="headerlink" title="简单工厂模式(Simple Factory Pattern)"></a>简单工厂模式(Simple Factory Pattern)</h3><p>简介</p>
+<blockquote>
+<p>简单工厂模式(Simple Factory Pattern)：又称为静态工厂方法(Static Factory Method)模式，它属于类创建型模式。在简单工厂模式中，可以根据自变量的不同返回不同类的实例。</p>
+</blockquote>
+<p>UML图</p>
+<p><img src="http://i.imgur.com/8PwZoRP.png" alt></p>
+<p>示例</p>
+<pre><code>package com.ans;
+
+    //抽象产品类角色
+    interface Animal {
+        public void Say();
+    }
+
+    //具体产品角色
+    class Dog implements Animal {
+        public void Say() {
+            System.out.println(&quot;I am a Dog&quot;);
+        }
+    }
+
+    class Cow implements Animal {
+        public void Say() {
+            System.out.println(&quot;I am a Cow&quot;);
+        }
+    }
+
+
+    //工厂类角色
+    public class FactoryPattern {
+        public static Animal makeAnimal(String name) {
+            if(name.equals(&quot;Dog&quot;))
+                return new Dog();
+            else
+                return new Cow();
+        }
+
+        public static void main(String[] args) {
+            String s = &quot;Dog&quot;;
+            String s1 = &quot;Cow&quot;;
+            makeAnimal(s).Say();
+            makeAnimal(s1).Say();
+        }
+
+    }
+</code></pre><p><strong>分析</strong></p>
+<p>优点：</p>
+<p>1.工厂类含有必要的判断逻辑，可以决定在什么时候创建哪一个产品类的实例，客户端可以免除直接创建产品对象的责任，而仅仅“消费”产品；简单工厂模式通过这种做法实现了对责任的分割，它提供了专门的工厂类用于创建对象。  </p>
+<p>2.客户端无需知道所创建的具体产品类的类名，只需要知道具体产品类所对应的<strong>参数</strong>（比如代码中的String 型 name 参数）即可，对于一些复杂的类名，通过简单工厂模式可以减少使用者的记忆量。  </p>
+<p>3.通过引入配置文件，可以在不修改任何客户端代码的情况下更换和增加新的具体产品类，在一定程度上提高了系统的灵活性。  </p>
+<p>缺点：</p>
+<p>1.由于工厂类集中了所有产品创建逻辑，一旦不能正常工作，整个系统都要受到影响。  </p>
+<p>2.使用简单工厂模式将会增加系统中类的个数，在一定程序上增加了系统的复杂度和理解难度。  </p>
+<p>3.<strong>系统扩展困难，一旦添加新产品就不得不修改工厂逻辑，在产品类型较多时，有可能造成工厂逻辑过于复杂，不利于系统的扩展和维护</strong>。这一点最为突出。比如在上面的例子中，要再增加一个 Monkey 类，一个 Panda 类……，则在工厂类方法中要做很多判断，必然造成代码臃肿。  </p>
+<p>4.简单工厂模式由于使用了静态工厂方法，造成工厂角色无法形成基于继承的等级结构。 </p>
+<h3 id="工厂模式-Factory-Pattern"><a href="#工厂模式-Factory-Pattern" class="headerlink" title="工厂模式(Factory Pattern)"></a>工厂模式(Factory Pattern)</h3><pre><code>package com.ans;
+
+//抽象产品类角色
+interface Animal {
+    public void Say();
+}
+
+//具体产品角色
+
+class Dog implements Animal {
+    public void Say() {
+        System.out.println(&quot;I am a Dog&quot;);
+    }
+}
+
+class Cow implements Animal {
+    public void Say() {
+        System.out.println(&quot;I am a Cow&quot;);
+    }
+}
+
+class Panda implements Animal {
+    public void Say() {
+        System.out.println(&quot;I am a Panda&quot;);
+    }
+}
+
+//一个抽象工厂，只定义了工厂所需要的方法，具体实现由具体工厂来完成
+interface AnimalFactory {
+    public Animal makeAnimal();
+}
+
+//造Dog的工厂
+class MakeDog implements AnimalFactory {
+    public Animal makeAnimal() {
+        return new Dog();
+    }
+}
+
+//造Cow的工厂
+class MakeCow implements AnimalFactory {
+    public Animal makeAnimal() {
+        return new Cow();
+    }
+}
+
+//造Panda的工厂
+class MakePanda implements AnimalFactory {
+    public Animal makeAnimal() {
+        return new Panda();
+    }
+}
+
+public class FactoryPattern {
+
+    public static void main(String[] args) {
+        new MakeDog().makeAnimal().Say();
+        new MakeCow().makeAnimal().Say();
+        new MakePanda().makeAnimal().Say();
+    }
+
+}
+</code></pre><p><strong>分析</strong></p>
+<p><strong>在工厂方法模式中，核心的工厂类不再负责所有的产品的创建，而是将具体创建的工作交给子类或者接口的实现类去做。</strong></p>
+<p>这个核心类则摇身一变，成为了一个抽象工厂角色，仅负责给出具体工厂子类必须实现的接口，而不接触哪一个产品类应当被实例化这种细节。 </p>
+<p><strong>优点</strong></p>
+<p>1）在工厂方法模式中，工厂方法用来创建客户所需要的产品，同时还向客户隐藏了哪种具体产品类将被实例化这一细节，用户只需要关心所需产品对应的工厂，无需关心创建细节，甚至无需知道具体产品类的类名。</p>
+<p>2)基于工厂角色和产品角色的多态性设计是工厂方法模式的关键。它能够使工厂可以自主确定创建何种产品对象，而如何创建这个对象的细节则完全封装在具体工厂内部。工厂方法模式之所以又被称为<strong>多态工厂模式</strong>，正是因为所有的具体工厂类都具有同一抽象父类。  </p>
+<p>3)使用工厂方法模式的另一个优点是在系统中加入新产品时，<strong>无需修改抽象工厂和抽象产品提供的接口</strong>，<strong>无需修改客户端</strong>，也无需修改其他的具体工厂和具体产品，而只要添加一个具体工厂和具体产品就可以了，这样，系统的<strong>可扩展性</strong>也就变得非常好，完全符合“开闭原则”。</p>
+<p><strong>缺点</strong></p>
+<p>1)在添加新产品时，需要编写新的具体产品类，而且还要提供与之对应的具体工厂类，<strong>系统中类的个数将成对增加</strong>，在一定程度上增加了系统的复杂度，有更多的类需要编译和运行，会给系统带来一些额外的开销。  </p>
+<p>2)由于考虑到系统的可扩展性，<strong>需要引入抽象层</strong>，在客户端代码中均使用抽象层进行定义，增加了系统的抽象性和理解难度，且在实现时可能需要用到DOM、反射等技术，增加了系统的实现难度.</p>
+<h3 id="抽象工厂模式-Abstract-Factory-Mode"><a href="#抽象工厂模式-Abstract-Factory-Mode" class="headerlink" title="抽象工厂模式(Abstract Factory Mode)"></a>抽象工厂模式(Abstract Factory Mode)</h3><p>抽象工厂模式提供一个创建一系列或相互依赖的对象的接口，而无需指定它们具体的类。</p>
+<p>抽象工厂是应对<strong>产品族</strong>概念的。比如说，每个汽车公司可能要同时生产轿车，货车，客车，那么每一个工厂都要有创建轿车，货车和客车的方法。</p>
+<p>增加新的产品线很容易，但是无法增加新的产品。</p>
+<p>代码实例：</p>
+<pre><code>package com.ans;
+
+//抽象产品类角色
+interface Animal {
+    public void Say();
+}
+
+//具体产品角色
+class Dog implements Animal {
+    public void Say() {
+        System.out.println(&quot;I am a Dog&quot;);
+    }
+}
+
+class Cow implements Animal {
+    public void Say() {
+        System.out.println(&quot;I am a Cow&quot;);
+    }
+}
+
+class Panda implements Animal {
+    public void Say() {
+        System.out.println(&quot;I am a Panda&quot;);
+    }
+}
+
+//抽象工厂类角色
+interface AnimalFactory {
+    public Animal createDog();
+    public Animal createCow();
+    public Animal createPanda();
+}
+
+
+//具体工厂类角色
+class Zoo implements AnimalFactory {
+    public Animal createDog() {
+        return new Dog();
+    }
+    public Animal createCow() {
+        return new Cow();
+    }
+
+    public Animal createPanda() {
+        return new Panda();
+    }
+}
+
+
+public class FactoryPattern {
+
+    public static void main(String[] args) {
+        new Zoo().createCow().Say();
+        new Zoo().createDog().Say();
+        new Zoo().createPanda().Say();
+    }
+
+}
+</code></pre><p><strong>分析</strong></p>
+<p>代码中的Zoo相当于一个产品线，这个产品线需要生产三种动物：Dog，Cow，Zoo。如果这个产品线需要再生产一种动物，则需要修改原来的接口结构，但是如果再生产一个Zoo，则可以很容易做到，这就是其面向生产线的特点。抽象工厂模式就可以在类内部对产品族的关联关系进行定义和描述，而不必专门引入一个新的类来进行管理。</p>
+<p>与工厂模式相比：可以看出来，前者每个产品都需要一个工厂，而后者将其全部封装在一个工厂里面了。</p>
+<p>优点：<br>（1） 隔离了具体类的生成，使得用户不需要知道什么被创建了。<br>（2） 当一个产品族中的多个对象被设计成一起工作时，它能够保证客户端始终只使用同一个产品族中的对象。<br>缺点：<br> 产品族的扩展将是一件十分费力的事情，假如产品族中需要增加一个新的产品，则几乎所有的工厂类都需要进行修改。所以使用抽象工厂模式时，对产品等级结构的划分是非常重要的。</p>
+<p><strong>总结</strong></p>
+<p>无论是简单工厂模式，工厂方法模式，还是抽象工厂模式，他们都属于工厂模式，在形式和特点上也是极为相似的，他们的最终目的都是为了解耦。在使用时，我们不必去在意这个模式到底工厂方法模式还是抽象工厂模式，因为他们之间的演变常常是令人琢磨不透的。经常你会发现，明明使用的工厂方法模式，当新需求来临，稍加修改，加入了一个新方法后，由于类中的产品构成了不同等级结构中的产品族，它就变成抽象工厂模式了；而对于抽象工厂模式，当减少一个方法使的提供的产品不再构成产品族之后，它就演变成了工厂方法模式。所以，在使用工厂模式时，只需要关心降低耦合度的目的是否达到了。</p>
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2015/09/06/设计模式之原型模式/" title="设计模式之原型模式" class="prev">上一篇</a><a href="/2015/09/04/数组中只出现一次的数字/" title="数组中只出现一次的数字" class="next">下一篇</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

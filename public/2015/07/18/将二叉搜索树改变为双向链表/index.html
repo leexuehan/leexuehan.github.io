@@ -1,0 +1,218 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.8.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> 将二叉搜索树改变为双向链表 · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="将二叉搜索树改变为双向链表 - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">将二叉搜索树改变为双向链表</h1><div class="post-info">2015-07-18<p class="visit"><i data-identity="2015/07/18/将二叉搜索树改变为双向链表/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><h2 id="剑指offer面试题系列"><a href="#剑指offer面试题系列" class="headerlink" title="剑指offer面试题系列"></a>剑指offer面试题系列</h2><blockquote>
+<p>题目：输入一颗二叉搜索树，将该二叉搜索树转换成一个排序的双向链表。要求<strong>不能创建任何新的结点，只能调整树中结点指针的指向</strong>，比如输入左边的二叉树，输出转换之后的排序双向链表。</p>
+</blockquote>
+<pre><code>  二叉搜索树                    双向链表
+
+     10
+  6     14                 4--6--8--10--12--14--16(此处为了简便，将双向箭头做了简化)
+4  8   12 16                                              
+</code></pre><h3 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h3><p>原始的二叉搜索树如图所示</p>
+<p><img src="https://cloud.githubusercontent.com/assets/12984324/8761865/d28bc0c4-2d99-11e5-884d-420fe135f693.PNG" alt="default"></p>
+<p>解决此题的关键点：1.将二叉树结点的right和left指针与双向链表的前后指针对应起来；2.改变指针的时候，root指针的指向与他的left或者right是叶子节点还是一棵子树有很大关系，相应的改变方法也稍有不同。而改变方法的关键点在于深刻理解二叉搜索树的中序遍历原理。</p>
+<p>如果 root 结点的左孩子是叶子节点，则直接改变指针指向即可；如果 root 结点的左孩子是一棵树，则需要找到这棵树最右边的节点，这个节点在中序遍历时，也是与结点紧挨着的前面的结点；同理，右孩子也一样，如果是子树的话，需要找到右子树的最左边的结点。</p>
+<p>改变指针关系如图所示</p>
+<p><img src="https://cloud.githubusercontent.com/assets/12984324/8761885/807c41a4-2d9a-11e5-90b2-5f8fff71768d.PNG" alt="default"></p>
+<p>改造后的双向链表模型如图<br><img src="https://cloud.githubusercontent.com/assets/12984324/8761886/8801fa5e-2d9a-11e5-9707-423363e7bc6e.PNG" alt="default"></p>
+<p>开始拿到这个题的时候想着递归遍历到最左边的结点时，然后再改变指向关系，可是发现当你遍历到一个叶子结点的时候，无法指向父节点。所以递归的<strong>结束条件是遍历到叶子节点</strong>。</p>
+<h3 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h3><p>主要代码如下：</p>
+<pre><code>/* 将二叉排序树转换成双向链表 */
+    public static void ConverseToList(TreeNode root) {
+        if (isLeaf(root)) // Leaf Node
+            return;
+        if (root.left != null) {
+            ConverseToList(root.left);
+            if (isLeaf(root.left)) { // Left child is Leaf Node
+                root.left.right = root;
+            } else { // has sub-left tree
+                // find the right most node
+                TreeNode RightEdge = root.left;
+                while (RightEdge.right != null) {
+                    RightEdge = RightEdge.right;
+                }
+                root.left = RightEdge;
+                RightEdge.right = root;
+            }
+        }
+        if (root.right != null) {
+            ConverseToList(root.right);
+            if (isLeaf(root.right)) {
+                root.right.left = root;
+            } else { // has sub-right tree
+                // find the left most node
+                TreeNode LeftEdge = root.right;
+                while (LeftEdge.left != null) {
+                    LeftEdge = LeftEdge.left;
+                }
+                root.right = LeftEdge;
+                LeftEdge.left = root;
+            }
+        }
+    }
+
+    public static boolean isLeaf(TreeNode node) {
+        if (node != null &amp;&amp; node.left == null &amp;&amp; node.right == null)
+            return true;
+        return false;
+    }
+
+
+    /*打印双向链表*/
+    public static void PrintList(TreeNode root) {
+        //find the left start
+        TreeNode head = root;
+        while(head.left != null) {
+            head = head.left;
+        }
+
+        //begin to print from left to right
+        System.out.println(&quot;Print from left to right&quot;);
+        while(head.right != null) {
+            System.out.print(head.data + &quot;----&quot;);
+            head = head.right;
+        }
+        System.out.println(&quot;NULL&quot;);
+
+        //print from right to left
+        System.out.println(&quot;Print from right to left&quot;);
+        while(head != null) {
+            System.out.print(head.data + &quot;----&quot;);
+            head = head.left;
+        }
+        System.out.println(&quot;NULL&quot;);
+
+    }
+</code></pre><h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><p>现在对于理解和使用递归这种方法，稍微有点感觉了，继续保持。但是在纸上写程序的功底较差，要在这方面加强。</p>
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2015/07/19/字符串的全排列/" title="字符串的全排列" class="prev">上一篇</a><a href="/2015/07/17/打印二叉树中等于某一个整数所有路径/" title="打印二叉树中等于某一个整数所有路径" class="next">下一篇</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

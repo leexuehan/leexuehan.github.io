@@ -1,0 +1,185 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.8.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> Struts2架构之微观解释 · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Struts2架构之微观解释 - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">Struts2架构之微观解释</h1><div class="post-info">2015-07-24<p class="visit"><i data-identity="2015/07/24/Struts2架构之微观解释/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><p>本文从微观角度来介绍下Struts2.</p>
+<p>还是按照上一篇讲的主线来看。</p>
+<h2 id="第一条主线——Struts2初始化"><a href="#第一条主线——Struts2初始化" class="headerlink" title="第一条主线——Struts2初始化"></a>第一条主线——Struts2初始化</h2><p>Struts2引入容器的概念，将<strong>所有被需要管理的对象全部置于容器之中</strong>。</p>
+<p>整个Struts2的初始化过程围绕着容器来展开。构成整个Struts2初始化过程分为<strong>数据结构定义</strong>和<strong>初始化行为的操作接口</strong>两个部分。</p>
+<h3 id="数据结构定义"><a href="#数据结构定义" class="headerlink" title="数据结构定义"></a>数据结构定义</h3><p>容器首先成为初始化主线中的核心元素，PackageConfig作为事件请求的配置元素也成为需要重点关注的构成元素。</p>
+<p>容器及容器的实现类</p>
+<pre><code>元素名称                     Java Package                       描述
+
+Container                   com.opensymphony.xwork2.inject    容器定义接口 
+ContainerImpl               com.opensymphony.xwork2.inject    容器实现接口，内部实现了    
+                                                                Struts2进行对象声明周期管理
+                                                              和依赖注入的基本功能
+
+PackageConfig               com.opensymphony.xwork2.config.   PackageConfig的实现类，其中
+                            entities                          定义了事件响应模型的完整数据
+                                                              结构
+</code></pre><h3 id="行为定义"><a href="#行为定义" class="headerlink" title="行为定义"></a>行为定义</h3><p>容器加载接口和容器的构造器</p>
+<pre><code>元素名称                     Java Package                       描述
+
+ConfigurationProvider       com.opensymphony.xwork2.config    配置加载接口的统一接口
+ContainerProvider           com.opensymphony.xwork2.config    Container配置加载接口，其实
+                                                              现类需要负责初始化容器内部的
+                                                              所有对象
+
+PackageConfig               com.opensymphony.xwork2.config    PackageConfig的配置加载接口
+                                                                其实现类需要负责初始化用于处
+                                                              理事件请求的配置对象
+ContainerBuilder            com.opensymphony.xwork2.inject    Container构造器，初始化时构
+                                                                 造容器
+  PackageConfigBuilder        PackageConfig的内部类              PackageConfig的构造器。
+</code></pre><h2 id="第二条主线"><a href="#第二条主线" class="headerlink" title="第二条主线"></a>第二条主线</h2><h3 id="第一阶段：Http预处理请求"><a href="#第一阶段：Http预处理请求" class="headerlink" title="第一阶段：Http预处理请求"></a>第一阶段：Http预处理请求</h3><p>控制权在Struts2手中，这个阶段涉及的微观元素都是Struts2类。</p>
+<pre><code>元素名称                  Java Package                        描述
+
+Dispatcher               org.apache.struts2.dispatcher      Struts2的核心分发器，是Struts2进行Http请求处理的实际场所
+
+PrepareOperations        org.apache.struts2.dispatcher.ng   Http请求预处理的操作集合
+ExecuteOperations        org.apache.struts2.dispatcher.ng   Struts2 进行Http请求处理逻辑的操作集合
+</code></pre><p><strong>Dispatcher是整个Struts2框架的核心，被称为核心分发器。</strong></p>
+<h3 id="第二条主线——第二阶段：XWork的执行逻辑"><a href="#第二条主线——第二阶段：XWork的执行逻辑" class="headerlink" title="第二条主线——第二阶段：XWork的执行逻辑"></a>第二条主线——第二阶段：XWork的执行逻辑</h3><p>控制权到了XWork框架中。</p>
+<pre><code>元素名称             Java Package                           描述
+
+ActionProxy         com.opensymphony.xwork2                XWork生产线中的执行环境，整个生产线的入口。
+ActionInvocation    com.opensymphony.xwork2                XWork生产线的调度者，负责调度整个生产线中各个元素的执行次序
+Interceptor         com.opensymphony.xwork2.interceptor    XWork生产线中的工序序列，可以丰富整个生产线的功能
+Action                com.opensymphony.xwork2                XWork生产线中的核心工序，负责核心业务逻辑的调用和实现
+ActionContext       com.opensymphony.xwork2                XWork生产线中的辅助设备，提供整个生产线工作运行的必须的数据环境。
+ValueStack             com.opensymphony.xwork2.util           XWork数据环境中提供表达式运算的工具类，也是XWork进行数据访问的基础。
+Result              com.opensymphony.xwork2                XWork生产线中的末端设备，负责输出生产线的生产结果
+</code></pre><p>上面表单中的七大元素是贯穿整个XWork事件执行器的整个生命周期，各司其职，相互配合，提供了事件执行框架的足够的扩展接口，要熟记。</p>
+<p>下图是它们之间的调用关系</p>
+<p><img src="http://i.imgur.com/u4amYGh.png" alt="调用关系图"></p>
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2015/07/24/Struts2之配置元素/" title="Struts2之配置元素" class="prev">上一篇</a><a href="/2015/07/23/Struts2架构之宏观解释/" title="Struts2架构之宏观解释" class="next">下一篇</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

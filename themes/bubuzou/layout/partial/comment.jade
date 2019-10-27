@@ -1,0 +1,14 @@
+if theme.leancloud.comment
+    a(href="#comment", class="comment-anchor")
+    div(id="vcomments")
+    script.
+        new Valine({
+            el: "#vcomments",
+            appId: "!{ theme.leancloud.appid }",
+            appKey: "!{ theme.leancloud.appkey }",
+            notify: false,
+            verify: false,
+            avatar: "robohash",
+            visitor: true,
+            placeholder: "随便说点什么～.～",
+        });

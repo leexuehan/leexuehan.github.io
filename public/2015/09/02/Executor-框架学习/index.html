@@ -1,0 +1,254 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.8.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> Executor 框架学习 · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Executor 框架学习 - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">Executor 框架学习</h1><div class="post-info">2015-09-02<p class="visit"><i data-identity="2015/09/02/Executor-框架学习/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><p><img src="http://i.imgur.com/arAfeHW.png" alt></p>
+<p>上图是 Executor 框架的轮廓图。</p>
+<p>下面进行一一介绍：</p>
+<h3 id="Future"><a href="#Future" class="headerlink" title="Future"></a>Future</h3><pre><code>public interface Future&lt;V&gt; {
+    boolean    cancel(boolean mayInterruptIfRunning) ;//如果应该中断执行此任务的线程，则为 true；否则允许正在运行的任务运行完成
+     V get(); //如有必要，等待计算完成，然后获取其结果。
+    V get(long timeout, TimeUnit unit);//如有必要，最多等待所给定的时间之后，获取其结果（如果结果可用）。
+    boolean    isCancelled();//如果在任务正常完成前将其取消，则返回 true。
+    boolean    isDone();//如果任务已完成，则返回 true。
+}
+</code></pre><p>实现类：</p>
+<pre><code>FutureTask, SwingWorker
+</code></pre><p>Future 表示异步计算的结果。它提供了检查计算是否完成的方法，以等待计算的完成，并获取计算的结果。</p>
+<p>计算完成后只能使用 get 方法来获取结果，如有必要，计算完成前可以阻塞此方法。</p>
+<p>取消则由 cancel 方法来执行。还提供了其他方法，以确定任务是正常完成还是被取消了。一旦计算完成，就不能再取消计算。如果为了可取消性而使用 Future 但又不提供可用的结果，则可以声明 Future&lt;?&gt; 形式类型、并返回 null 作为底层任务的结果。</p>
+<h4 id="FutureTask"><a href="#FutureTask" class="headerlink" title="FutureTask"></a>FutureTask</h4><pre><code>public class FutureTask&lt;V&gt;  implements RunnableFuture&lt;V&gt; {
+
+}
+
+//可使用 FutureTask 包装 Callable 或 Runnable 对象。因为 FutureTask 实现了 Runnable，所以可将 FutureTask 提交给 Executor 执行。
+</code></pre><p>重要的构造方法：</p>
+<pre><code>FutureTask(Callable&lt;V&gt; callable) 
+//创建一个 FutureTask，一旦运行就执行给定的 Callable。
+FutureTask(Runnable runnable, V result) 
+//创建一个 FutureTask，一旦运行就执行给定的 Runnable，并安排成功完成时 get 返回给定的结果 。
+</code></pre><h3 id="callable"><a href="#callable" class="headerlink" title="callable"></a>callable</h3><pre><code>public interface Callable&lt;V&gt; {
+    V call();
+     // 只有这一个方法
+     // 计算结果，如果无法计算结果，则抛出一个异常。
+}
+</code></pre><h3 id="Executor"><a href="#Executor" class="headerlink" title="Executor"></a>Executor</h3><pre><code>public interface Executor {
+    void execute(Runnable command); 
+      //在未来某个时间执行给定的命令。
+}
+</code></pre><p>Executor 使用 Runnable 作为其任务的基本表达形式。</p>
+<p>此接口提供一种将任务提交与每个任务将如何运行的机制（包括线程使用的细节、调度等）分离开来的方法。通常使用 Executor 而不是显式地创建线程。</p>
+<p>例如，可能会使用以下方法</p>
+<pre><code>Executor executor = anExecutor;
+executor.execute(new RunnableTask1());
+executor.execute(new RunnableTask2());
+...
+</code></pre><p>而不是为一组任务中的每个任务调用 </p>
+<pre><code>new Thread(new(RunnableTask())).start()：
+</code></pre><p>不过， Executor 接口并没有严格地要求执行是异步的。在最简单的情况下，执行程序可以在调用者的线程中立即运行已提交的任务：</p>
+<pre><code>class DirectExecutor implements Executor {
+    public void execute(Runnable r) {
+        r.run();
+    }
+}
+</code></pre><p>更常见的是，任务是在某个不是调用者线程的线程中执行的。以下执行程序将为每个任务生成一个新线程。<br>     class ThreadPerTaskExecutor implements Executor {<br>         public void execute(Runnable r) {<br>             new Thread(r).start();<br>         }<br>     }</p>
+<p>子接口： ExecutorService</p>
+<pre><code>public interface ExecutorService extends Executor {
+
+}
+</code></pre><p>下面是其API轮廓图：</p>
+<p><img src="http://i.imgur.com/w0AaBM1.png" alt></p>
+<p>可以看出来，其继承 Executor 后在其基础上又扩展了很多方法。</p>
+<p>实现子类：ThreadPoolExecutor</p>
+<p>构造方法：</p>
+<pre><code>public ThreadPoolExecutor(int corePoolSize,
+                          int maximumPoolSize,
+                          long keepAliveTime,
+                          TimeUnit unit,
+                          BlockingQueue&lt;Runnable&gt; workQueue,
+                          ThreadFactory threadFactory,
+                          RejectedExecutionHandler handler)
+</code></pre><p>用给定的初始参数创建新的 ThreadPoolExecutor。</p>
+<p>参数：</p>
+<pre><code>corePoolSize - 池中所保存的线程数，包括空闲线程。
+maximumPoolSize - 池中允许的最大线程数。
+keepAliveTime - 当线程数大于核心时，此为终止前多余的空闲线程等待新任务的最长时间。
+unit - keepAliveTime 参数的时间单位。
+workQueue - 执行前用于保持任务的队列。此队列仅保持由 execute 方法提交的 Runnable 任务。
+threadFactory - 执行程序创建新线程时使用的工厂。
+handler - 由于超出线程范围和队列容量而使执行被阻塞时所使用的处理程序。
+</code></pre><p>抛出：</p>
+<pre><code>IllegalArgumentException - 如果 corePoolSize 或 keepAliveTime 小于 0，或者 maximumPoolSize 小于等于 0，或者 corePoolSize 大于 maximumPoolSize。
+NullPointerException - 如果 workQueue、 threadFactory 或 handler 为 null。
+</code></pre><h3 id="CompletionService"><a href="#CompletionService" class="headerlink" title="CompletionService"></a>CompletionService</h3><pre><code>public interface CompletionService&lt;V&gt; {
+
+}
+</code></pre><p><strong>将生产新的异步任务与使用已完成任务的结果分离开来的服务。</strong></p>
+<p>在此之前，如果你向 Executor 提交了一个批处理任务，并且希望在它们完成后获得结果，为此你可以保存与每个任务相关联的 Future，然后不断地调用 timeout 为 0 的get，来检验 Future 是否完成。这样做略显麻烦。</p>
+<p>这个问题，用CompletionService来完成。</p>
+<p>生产者 submit 执行的任务。使用者 take 已完成的任务，并按照完成这些任务的顺序处理它们的结果。</p>
+<p>例如，CompletionService 可以用来管理异步 IO ，执行读操作的任务作为程序或系统的一部分提交，然后，当完成读操作时，会在程序的不同部分执行其他操作，执行操作的顺序可能与所请求的顺序不同。</p>
+<p>通常，CompletionService 依赖于一个单独的 Executor 来实际执行任务，在这种情况下，CompletionService <strong>只管理一个内部完成队列</strong>。ExecutorCompletionService 类提供了此方法的一个实现。</p>
+<p>方法摘要：</p>
+<pre><code>Future&lt;V&gt;    poll() 
+         获取并移除表示下一个已完成任务的 Future，如果不存在这样的任务，则返回 null。
+Future&lt;V&gt;    poll(long timeout, TimeUnit unit) 
+         获取并移除表示下一个已完成任务的 Future，如果目前不存在这样的任务，则将等待指定的时间（如果有必要）。
+Future&lt;V&gt;    submit(Callable&lt;V&gt; task) 
+         提交要执行的值返回任务，并返回表示挂起的任务结果的 Future。
+Future&lt;V&gt;    submit(Runnable task, V result) 
+         提交要执行的 Runnable 任务，并返回一个表示任务完成的 Future，可以提取或轮询此任务。
+Future&lt;V&gt;    take() 
+         获取并移除表示下一个已完成任务的 Future，如果目前不存在这样的任务，则等待。
+</code></pre><p>实现子类：</p>
+<pre><code>public class ExecutorCompletionService&lt;V&gt; extends Object implements CompletionService&lt;V&gt; {
+
+}
+</code></pre><p>它的实现原理是这样的：</p>
+<p>它在构造函数中创建了一个 BlockingQueue，用它来保存完成的结果。计算完成时会调用FutureTask中的done方法。</p>
+<p>当提交了一个任务后，首先把这个任务包装为一个 QueuingFuture，它是FutureTask的一个子类，覆盖了done方法。将结果置入 BlockingQueue中。</p>
+<p>take 和 poll 方法委托给了 BlockingQueue。</p>
+<p>用法示例：</p>
+<p> 假定您有针对某个问题的一组求解程序，每个求解程序都能返回某种类型的 Result 值，并且您想同时运行它们，使用方法 use(Result r) 处理返回非 null 值的每个求解程序的返回结果。可以这样编写程序：</p>
+<pre><code>void solve(Executor e, Collection&lt;Callable&lt;Result&gt;&gt; solvers)
+  throws InterruptedException, ExecutionException {
+    CompletionService&lt;Result&gt; ecs = new ExecutorCompletionService&lt;Result&gt;(e);
+    for (Callable&lt;Result&gt; s : solvers)
+        ecs.submit(s);
+    int n = solvers.size();
+    for (int i = 0; i &lt; n; ++i) {
+        Result r = ecs.take().get();
+        if (r != null) 
+            use(r);
+    }
+}
+</code></pre></div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2015/09/02/collections-学习/" title="collections 学习" class="prev">上一篇</a><a href="/2015/09/01/Condition-学习/" title="Condition 学习" class="next">下一篇</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

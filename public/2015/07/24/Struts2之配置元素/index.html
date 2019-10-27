@@ -1,0 +1,180 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.8.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> Struts2之配置元素 · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Struts2之配置元素 - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">Struts2之配置元素</h1><div class="post-info">2015-07-24<p class="visit"><i data-identity="2015/07/24/Struts2之配置元素/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><p>这一篇从Struts2配置元素来讲Struts2.</p>
+<p>## </p>
+<blockquote>
+<p>配置就是程序的影子，无论什么框架，框架总是作为一个重要的组成部分，在框架的运行过程中发挥作用。</p>
+</blockquote>
+<h3 id="表现形式"><a href="#表现形式" class="headerlink" title="表现形式"></a>表现形式</h3><p>Struts2支持所有的配置形式包括XML和Properties。从形式上来讲，以XML为核心，Properties作为辅助。</p>
+<h3 id="作用范围"><a href="#作用范围" class="headerlink" title="作用范围"></a>作用范围</h3><p>struts-default.xml和default.properties是框架级别的配置文件。这两个文件蕴含在Struts2的核心包中，应用程序启动时被初始化程序读取并加载。</p>
+<p>struts.xml和struts.Properties作用于应用级别，其中定义的所有内容将覆盖框架级别的定义。</p>
+<p>struts-plugin.xml则通过插件形式进行应用级别的定义。</p>
+<h3 id="配置文件的必要性"><a href="#配置文件的必要性" class="headerlink" title="配置文件的必要性"></a>配置文件的必要性</h3><p>应用程序级别的配置文件都不是必须存在的。只有Web.xml中的配置是必须的，因为在其中定义了Struts2的入口程序。</p>
+<p>如图：</p>
+<p><img src="http://i.imgur.com/tHuaUNU.png" alt></p>
+<h3 id="配置元素的定义"><a href="#配置元素的定义" class="headerlink" title="配置元素的定义"></a>配置元素的定义</h3><p>下图是struts-default.xml中截取的一部分：</p>
+<p><img src="http://i.imgur.com/AzSRzJG.png" alt></p>
+<p>这只是冰山一角。</p>
+<p>接下来将分析其中的含义。</p>
+<p>1.include节点</p>
+<p>最为常见的使用方法，我们可以在应用级别的配置文件里，将整个应用的配置根据一定的逻辑划分成若干个独立的配置文件，以方便的进行<strong>模块化处理</strong>。</p>
+<p>2.bean节点</p>
+<p>从上面的图中也可以看出，这个节点实际上一个用于描述<strong>接口及其实现类映射关系的节点。</strong></p>
+<p>bean节点的寻址是通过name属性和type属性共同构成一个逻辑主键来共同决定一个class属性。</p>
+<p>Struts2在框架级别实现了一个对象容器，<strong>并将配置文件中所有的bean节点所定义的对象纳入容器之中进行管理。Struts2通过容器在框架级别负责这些对象的创建、销毁以及依赖关系的处理。</strong></p>
+<p>在应用级别配置文件中，通过<strong>增加bean节点</strong>，就可以把一个对象纳入Struts2的容器中进行管理。</p>
+<p>3.constant节点</p>
+<p>在配置文件中的存在形式</p>
+<pre><code>&lt;constant name=&quot;struts.excludedClasses&quot;
+              value=&quot;
+                java.lang.Object,
+                java.lang.Runtime,
+                java.lang.System,
+                java.lang.Class,
+                java.lang.ClassLoader,
+                java.lang.Shutdown,
+                ognl.OgnlContext,
+                ognl.MemberAccess,
+                ognl.ClassResolver,
+                ognl.TypeConverter,
+                com.opensymphony.xwork2.ActionContext&quot; /&gt;
+</code></pre><p>是一个非常典型的键值对类型的配置，<strong>主要用于定义Struts2运行时的参数</strong>。<br>其实与Properties文件配置的作用是完全一样的。</p>
+<p>4.package节点</p>
+<p>是一个复杂的复合节点，在其中包含了众多子节点：ResultType、Interceptor、Action等。这些子节点全部继承自XWork框架。</p>
+<p><strong>一个Package节点实际上可以被看做是一条简单的XWork生产流水线，其中包含XWork框架如何应对某些请求并选择相应的执行序列进行处理的具体方式。</strong></p>
+<p>package节点的属性之中，name是唯一的标识符，namespace则从命名的空间的角度为整个事件请求机制划分不同的种类。</p>
+<p>extends属性允许继承。</p>
+<h3 id="Struts2配置元素的分类"><a href="#Struts2配置元素的分类" class="headerlink" title="Struts2配置元素的分类"></a>Struts2配置元素的分类</h3><p>XML配置文件中的bean节点和constant节点，可以归为<strong>容器配置元素</strong>。</p>
+<p>XML配置文件中的package节点定义了一种事件请求响应的映射关系，可以归为<strong>映射关系元素</strong>。</p>
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2015/07/24/Struts2之容器（一）/" title="Struts2之容器（一）" class="prev">上一篇</a><a href="/2015/07/24/Struts2架构之微观解释/" title="Struts2架构之微观解释" class="next">下一篇</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>
