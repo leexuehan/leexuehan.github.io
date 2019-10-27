@@ -1,0 +1,180 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.9.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> JDK源码之HashMap扩容 · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="JDK源码之HashMap扩容 - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">JDK源码之HashMap扩容</h1><div class="post-info">2019-08-19<p class="visit"><i data-identity="2019/08/19/JDK源码之HashMap/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><p>本文聊聊 HashMap 的扩容机制。</p>
+<p>扩容机制：</p>
+<ol>
+<li><p>确定好扩容后的容量 <code>newCap</code> 和扩容阈值 <code>newThr</code>：</p>
+<p>使用伪代码描述如下：</p>
+</li>
+</ol>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> oldCap &gt; <span class="number">0</span>:</span><br><span class="line">​	<span class="keyword">if</span> oldCap &gt;= MAX_CAPACITY</span><br><span class="line">​			threshold = 正无穷</span><br><span class="line">​			<span class="keyword">return</span></span><br><span class="line">	<span class="keyword">else</span> </span><br><span class="line">    	//最常见的一种扩容方式：容量和阈值都扩大<span class="number">2</span>倍</span><br><span class="line">    	newCap = oldCap &lt;&lt; <span class="number">1</span></span><br><span class="line">        <span class="keyword">if</span> newCap &lt; MAX_CAPACITY &amp;&amp; oldCap &gt;= <span class="number">16</span></span><br><span class="line">        	newThr = oldThr &lt;&lt; <span class="number">1</span></span><br><span class="line"><span class="keyword">if</span> oldCap == <span class="number">0</span>:</span><br><span class="line">    <span class="keyword">if</span> oldThr &gt; <span class="number">0</span>:</span><br><span class="line">        newCap = oldThr</span><br><span class="line">    <span class="keyword">else</span> </span><br><span class="line">    //初始化时</span><br><span class="line">    	newCap = <span class="number">16</span></span><br><span class="line">        newThr = <span class="number">16</span> * <span class="number">0.75</span></span><br><span class="line"><span class="keyword">if</span> oldThr == <span class="number">0</span>:</span><br><span class="line">    <span class="keyword">if</span> newCap &lt; MAX_CAPACITY &amp;&amp; newCap * <span class="number">0.75</span> &lt; MAX_CAPACITY:</span><br><span class="line">        newThr = newCap * <span class="number">0.75</span></span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">    	newThr = 正无穷</span><br></pre></td></tr></table></figure>
+<p>总体来说，就是根据旧有的容量变量<code>oldCap</code>和扩容阈值<code>oldThr</code>更新。</p>
+<p>主要分为两种情况：</p>
+<ul>
+<li>初始化时默认值</li>
+<li>正常情况下，默认都乘以<code>2</code>作为扩充方式</li>
+<li>oldCap 为0，但是 oldThr 不为0的情况</li>
+</ul>
+<ol start="2">
+<li><p>确定好新的容量和阈值后，就要开始构造新的位桶，并开始将原来的位桶拷贝到新的位桶。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Node&lt;K,V&gt;[] newTab = (Node&lt;K,V&gt;[])<span class="keyword">new</span> Node[newCap];</span><br><span class="line">table = newTab;</span><br></pre></td></tr></table></figure>
+<p>遍历 oldTab 中取到元素后判断该位置的元素下面是不是一个链表或者一棵树，如果该位置只有其一个元素，则将其重新映射到位桶的新位置中：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">Node&lt;K,V&gt; e;</span><br><span class="line"><span class="keyword">if</span> ((e = oldTab[j]) != <span class="keyword">null</span>) &#123;</span><br><span class="line">	<span class="comment">//oldTab 中的元素置空，便于回收</span></span><br><span class="line">    oldTab[j] = <span class="keyword">null</span>;</span><br><span class="line">    <span class="keyword">if</span> (e.next == <span class="keyword">null</span>)</span><br><span class="line">        <span class="comment">//重新映射一个位置</span></span><br><span class="line">        newTab[e.hash &amp; (newCap - <span class="number">1</span>)] = e;</span><br></pre></td></tr></table></figure>
+<p>如果下面挂的是一棵红黑树，则分裂到新的位桶数组中，split 方法我们回过头来再看，此处按下不表。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">else</span> <span class="keyword">if</span> (e <span class="keyword">instanceof</span> TreeNode)</span><br><span class="line">    <span class="comment">//如果下面挂的是一棵红黑树，则分裂</span></span><br><span class="line">    ((TreeNode&lt;K,V&gt;)e).split(<span class="keyword">this</span>, newTab, j, oldCap);</span><br></pre></td></tr></table></figure>
+<p>如果下面挂的是一个链表，此时会出现一个问题：</p>
+<blockquote>
+<p>原来数组 index 下挂的链表，由于扩容后，会有链表中的部分元素的位置发生变化（因为 index 映射规则是不变的）。</p>
+</blockquote>
+<p>举一个例子：</p>
+<p><div align="center"><img src="./beforeExpand.jpg" alt="扩容前"></div></p>
+<p>如图所示，假设 elem1 的 hashcode 的二进制表示为：0000 0101，elem2 的 hashcode 的二进制表示为：0001 0101。扩容前数组的大小为 <code>16</code>，由于 capacity - 1 的二进制表示为：0000 1111，所以采用 hashcode &amp; （capacity - 1）的映射规则，它们都会映射到 index 为 <code>5</code> 的位置。</p>
+<p><div align="center"><img src="./afterExpand.jpg" alt="扩容后"></div></p>
+<p>扩容后数组的大小变为 <code>32</code>，此时 capacity -1 的二进制表示为：0001 1111，依旧采用原来的映射规则，此时 elem1 映射的位置不变，而elem2则会被映射到下标为 <code>21</code> 的位置。</p>
+<p>所以这里就涉及到了一个问题：<strong>在新位置上挂的链表仍然要保持原来的相对顺序不变</strong>。</p>
+<p>代码中使用了 e.hash &amp; oldCap 进行判断，如果该值为 0，说明是不需要变更位桶下标的元素，反之，则是需要更改位置的元素。</p>
+<p>在实现层面上，使用了四个指针实现：loHead、loTail 指向了不需要变更位桶下标的链表的头尾；hiHead 和 hiTail 指向了需要变更位桶下标的链表的头尾。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">Node&lt;K,V&gt; loHead = <span class="keyword">null</span>, loTail = <span class="keyword">null</span>;</span><br><span class="line">Node&lt;K,V&gt; hiHead = <span class="keyword">null</span>, hiTail = <span class="keyword">null</span>;</span><br><span class="line">Node&lt;K,V&gt; next;</span><br><span class="line"><span class="keyword">do</span> &#123;</span><br><span class="line">    next = e.next;</span><br><span class="line">    <span class="keyword">if</span> ((e.hash &amp; oldCap) == <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="keyword">if</span> (loTail == <span class="keyword">null</span>)</span><br><span class="line">            <span class="comment">//链表为空，初始化链表头</span></span><br><span class="line">            loHead = e;</span><br><span class="line">        <span class="keyword">else</span></span><br><span class="line">            <span class="comment">//插到队尾</span></span><br><span class="line">            loTail.next = e;</span><br><span class="line">        loTail = e;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (hiTail == <span class="keyword">null</span>)</span><br><span class="line">            hiHead = e;</span><br><span class="line">        <span class="keyword">else</span></span><br><span class="line">            hiTail.next = e;</span><br><span class="line">        hiTail = e;</span><br><span class="line">    &#125;</span><br><span class="line">&#125; <span class="keyword">while</span> ((e = next) != <span class="keyword">null</span>);</span><br><span class="line"><span class="keyword">if</span> (loTail != <span class="keyword">null</span>) &#123;</span><br><span class="line">    loTail.next = <span class="keyword">null</span>;</span><br><span class="line">    newTab[j] = loHead;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">if</span> (hiTail != <span class="keyword">null</span>) &#123;</span><br><span class="line">    hiTail.next = <span class="keyword">null</span>;</span><br><span class="line">    newTab[j + oldCap] = hiHead;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>现在可以回头看看 TreeNode 的 split 方法发生了什么，其核心思路与转移链表的思路一样，将需要更改位桶下标的元素移动到另外一个下标处，<strong>并保持指针不变</strong>：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> (TreeNode&lt;K,V&gt; e = b, next; e != <span class="keyword">null</span>; e = next) &#123;</span><br><span class="line">    next = (TreeNode&lt;K,V&gt;)e.next;</span><br><span class="line">    e.next = <span class="keyword">null</span>;</span><br><span class="line">    <span class="keyword">if</span> ((e.hash &amp; bit) == <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="keyword">if</span> ((e.prev = loTail) == <span class="keyword">null</span>)</span><br><span class="line">            loHead = e;</span><br><span class="line">        <span class="keyword">else</span></span><br><span class="line">            loTail.next = e;</span><br><span class="line">        loTail = e;</span><br><span class="line">        ++lc;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> ((e.prev = hiTail) == <span class="keyword">null</span>)</span><br><span class="line">            hiHead = e;</span><br><span class="line">        <span class="keyword">else</span></span><br><span class="line">            hiTail.next = e;</span><br><span class="line">        hiTail = e;</span><br><span class="line">        ++hc;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>可以看到此处与前面相比，多了两个统计变量：lc 和 hc。这两个变量用来干什么呢？</p>
+<p>HashMap 有一个特性就是：一旦链表长度超出某个阈值，则将其转换为一棵红黑树，一旦树中元素个数小于某个阈值，则将其退化为链表。</p>
+<p>所以我们接着看后面：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (loHead != <span class="keyword">null</span>) &#123;</span><br><span class="line">    <span class="keyword">if</span> (lc &lt;= UNTREEIFY_THRESHOLD)</span><br><span class="line">        tab[index] = loHead.untreeify(map);</span><br><span class="line">    <span class="keyword">else</span> &#123;</span><br><span class="line">        tab[index] = loHead;</span><br><span class="line">        <span class="keyword">if</span> (hiHead != <span class="keyword">null</span>) <span class="comment">// (else is already treeified)</span></span><br><span class="line">            loHead.treeify(tab);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">if</span> (hiHead != <span class="keyword">null</span>) &#123;</span><br><span class="line">    <span class="keyword">if</span> (hc &lt;= UNTREEIFY_THRESHOLD)</span><br><span class="line">        tab[index + bit] = hiHead.untreeify(map);</span><br><span class="line">    <span class="keyword">else</span> &#123;</span><br><span class="line">        tab[index + bit] = hiHead;</span><br><span class="line">        <span class="keyword">if</span> (loHead != <span class="keyword">null</span>)</span><br><span class="line">            hiHead.treeify(tab);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>所以重点在于两个方法：untreeify 和 treeify。</p>
+<p>关于红黑树转链表和链表转红黑树的方法，此处先不表。</p>
+</li>
+</ol>
+<p>（全文完）</p>
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2019/08/21/MySQL之-redo-log/" title="MySQL之 redo log" class="prev">PREV</a><a href="/2019/08/18/Java并发之再谈线程池/" title="Java并发之再谈线程池" class="next">NEXT</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

@@ -1,0 +1,190 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.9.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> 寻找连续最大和子数组 · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="寻找连续最大和子数组 - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">寻找连续最大和子数组</h1><div class="post-info">2015-07-22<p class="visit"><i data-identity="2015/07/22/寻找连续最大和子数组/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><h2 id="剑指offer面试题系列"><a href="#剑指offer面试题系列" class="headerlink" title="剑指offer面试题系列"></a>剑指offer面试题系列</h2><blockquote>
+<p>题目：输入一个整型数组，数组里有正数也有负数，数组中一个或者连续的多个整数组成一个子数组，求所有子数组中的和的最大值。要求时间复杂度为O(n)。</p>
+</blockquote>
+<h3 id="Analyze"><a href="#Analyze" class="headerlink" title="Analyze"></a>Analyze</h3><p>刚拿到题的时候，花了大概五分钟的时间，连思路带实现三下五除二搞定，不亦快哉！</p>
+<p>但是，做了这么多的剑指offer的题，深感不安，有这么容易么？仔细再一想，是错误的。</p>
+<p>题目要求的是寻找连续的子数组，我直接按照从0下标开始的连续子数组思考了。审题不细致啊！</p>
+<p>于是推到重来，这一重来就再没做出来直到看了剑指offer上的思路提示，汗！</p>
+<p>我在剑指offer的思路上，添加了我自己的理解和实现。现说明如下：</p>
+<p>关于 Sum， 声明三个变量，preSum保存上一轮循环的元素之和，curSum保存当前循环的数组和，maxSum保存最大的和。startIndex保存子数组开始下标，endIndex保存子数组结束下标。</p>
+<p>如果preSum小于0，则可以想到，前面的所有元素只能起到一种“负的效应”，果断抛弃前面的序列，但是要保存前面的序列之和。</p>
+<p>如果preSum大于0，则继续累加，如果当前累加和大于maxSum，则更新之，同时更新endIndex。</p>
+<p>下面是这个代码流程的表格表示：</p>
+<p><img src="https://cloud.githubusercontent.com/assets/12984324/8824464/6cf2b8f0-30a8-11e5-82d6-241e35a89138.PNG" alt="solution17"></p>
+<h3 id="Code"><a href="#Code" class="headerlink" title="Code"></a>Code</h3><pre><code>package com.study;
+
+/*连续整形子数组的最大和*/
+public class Solution18 {
+    public static int[] GetSum(int[] arr) {
+        int startIndex = 0;
+        int endIndex = 0;
+        int preSum = 0;
+        int CurSum = 0;
+        int MaxSum = 0;
+
+        for (int i = 0; i &lt; arr.length; i++) {
+            if (preSum &lt; 0) {
+                startIndex = endIndex = i;
+                CurSum = arr[i];
+            } else {
+                CurSum += arr[i];
+            }
+            if (CurSum &gt; MaxSum) {
+                MaxSum = CurSum;
+                endIndex = i;
+            }
+            preSum = CurSum;
+        }
+
+        int[] subArr = new int[endIndex - startIndex + 1];
+        for (int k = startIndex, j = 0; k &lt;= endIndex; k++) {
+            subArr[j++] = arr[k];
+        }
+        return subArr;
+    }
+
+    public static void main(String[] args) {
+        int[] arr1 = { 1, -2, 3, 10, -4, 7, 2, -5 };
+        int[] arr = { -1, -2, -3, -4, 5, 8, -6, 9 };
+        int[] subarr = GetSum(arr);
+        for (int k = 0; k &lt; subarr.length; k++) {
+            System.out.print(subarr[k] + &quot; &quot;);
+        }
+    }
+}
+</code></pre><h3 id="Summary"><a href="#Summary" class="headerlink" title="Summary"></a>Summary</h3><p>还是没有掌握这种用表格表示的方法啊，通过这道题，更加明白了<strong>表格表示法在变量迭代更新的流程中起到的作用</strong>。这种方法最能看出迭代变量之间的关系，有助于快速理清思路。</p>
+<p>今后，要多用之，熟练用之。</p>
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2015/07/22/Servlet过滤器/" title="Servlet过滤器" class="prev">PREV</a><a href="/2015/07/22/Java-线程安全/" title="Java 线程安全" class="next">NEXT</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

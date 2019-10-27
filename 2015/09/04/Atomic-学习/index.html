@@ -1,0 +1,262 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.9.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> Atomic 学习 · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Atomic 学习 - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">Atomic 学习</h1><div class="post-info">2015-09-04<p class="visit"><i data-identity="2015/09/04/Atomic-学习/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><p>首先声明：<a href="http://blog.csdn.net/hsuxu/article/details/9467651" target="_blank" rel="noopener">http://blog.csdn.net/hsuxu/article/details/9467651</a> 这篇文章写得特别详实，看了好多博客，只有这一篇是从硬件底层过来解释的。</p>
+<p>眼前有景道不得，崔颢题诗在上头。</p>
+<p>虽然，有这样一篇博客足矣，但是一来觉得，还需要自己消化，二来，个人觉得这篇文章的排版不是很工整。出于这个目的，写了这篇博客。</p>
+<h3 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h3><p>这个包里面提供了一组<strong>原子变量</strong>类。</p>
+<p>Java从JDK1.5开始提供了java.util.concurrent.atomic包，方便程序员在多线程环境下，无锁的进行原子操作。</p>
+<p>其基本的特性就是在多线程环境下，当有多个线程同时执行这些类的实例包含的方法时，具有排他性，即当某个线程进入方法，执行其中的指令时，不会被其他线程打断，而别的线程就像自旋锁一样，一直等到该方法执行完成，才由JVM从等待队列中选择一个另一个线程进入，这只是一种逻辑上的理解。实际上是借助硬件的相关指令来实现的，不会阻塞线程(或者说只是在硬件级别上阻塞了)。</p>
+<p>原子变量的底层使用了处理器提供的原子指令，但是不同的CPU架构可能提供的原子指令不一样，也有可能需要某种形式的内部锁,所以该方法不能绝对保证线程不被阻塞。</p>
+<p>原子变量类相当于一种<strong>泛化的volatile变量</strong>，能够支持原子的和有条件的读-改-写操作。</p>
+<p>在了解具体实现之前，有必要先知道 CAS 的知识，因为它是整个包的前提。<br>关于CAS，此处只介绍一句话：</p>
+<blockquote>
+<p>CAS有3个操作数，内存值V，旧的预期值A，要修改的新值B。当且仅当预期值A和内存值V相同时，将内存值V修改为B，否则什么都不做。</p>
+</blockquote>
+<p>更多关于 CAS 的知识请参见本人其他博客。</p>
+<h3 id="具体介绍"><a href="#具体介绍" class="headerlink" title="具体介绍"></a>具体介绍</h3><p>java.util.concurrent.atomic中的类可以分成4组：</p>
+<ul>
+<li>标量类（Scalar）：AtomicBoolean，AtomicInteger，AtomicLong，AtomicReference</li>
+<li>数组类：AtomicIntegerArray，AtomicLongArray，AtomicReferenceArray</li>
+<li>更新器类：AtomicLongFieldUpdater，AtomicIntegerFieldUpdater，AtomicReferenceFieldUpdater</li>
+<li>复合变量类：AtomicMarkableReference，AtomicStampedReference</li>
+</ul>
+<p>第一组 AtomicBoolean，AtomicInteger，AtomicLong，AtomicReference这四种基本类型用来处理布尔，整数，长整数，对象四种数据，其内部实现不是简单的使用synchronized，而是一个更为高效的方式CAS (compare and swap) + volatile和native方法，从而避免了synchronized的高开销，执行效率大为提升。</p>
+<p>此处仅以 AtomicInteger 作为第一组的代表介绍：</p>
+<p>AtomicInteger 常用方法如下：</p>
+<ul>
+<li>int addAndGet(int delta) ：以原子方式将输入的数值与实例中的值（AtomicInteger里的value）相加，并返回结果</li>
+<li><p>boolean compareAndSet(int expect, int update) ：如果输入的数值等于预期值，则以原子方式将该值设置为输入的值。</p>
+<pre><code>public final boolean compareAndSet(int expect, int update) {
+    return unsafe.compareAndSwapInt(this, valueOffset, expect, update);
+}
+</code></pre></li>
+<li><p>int getAndIncrement()：以原子方式将当前值加1，注意：这里返回的是自增前的值。</p>
+</li>
+<li>void lazySet(int newValue)：最终会设置成newValue，使用lazySet设置值后，可能导致其他线程在之后的一小段时间内还是可以读到旧的值。</li>
+</ul>
+<pre><code> /**
+ * Atomically adds the given value to the current value.
+ * @param delta the value to add
+ * @return the updated value
+ */
+public final int addAndGet(int delta) {
+    for (;;) {
+        int current = get();
+        int next = current + delta;
+        if (compareAndSet(current, next))
+            return next;
+    }
+}
+</code></pre><p>当没有使用 AtomicInteger时，仅用 valatile 关键字，并不能保证内存同步，这个在之前也做过介绍。</p>
+<p>下面请看自己亲测的一个例子：</p>
+<pre><code>package lee;
+
+import java.util.concurrent.atomic.AtomicInteger;
+
+public class Atomic {
+    private static volatile int i = 0;
+    private static final int THREAD_NUM = 50;
+    public static void increase() {
+        i++;
+    }
+    public static void main(String[] args) {
+        // AtomicInteger ai = new AtomicInteger();
+        Thread[] threads = new Thread[THREAD_NUM];
+        for(int i = 0; i &lt; THREAD_NUM; i++) {
+            threads[i] = new Thread(new Runnable() {
+                public void run() {
+                    for(int i = 0; i &lt; 100000; i++) {
+                        increase();
+                    }
+                }
+            });
+            threads[i].start();
+        }
+
+
+        while( Thread.activeCount() &gt; 1)
+            Thread.yield();
+        System.out.println(&quot;累加的结果是：&quot; + i);
+    }
+
+}
+</code></pre><p>开启 50 个线程，每个线程都对int型整数 i 加10000次，期望结果就是 500000。但是结果呢？</p>
+<pre><code>累加的结果是：4394704
+</code></pre><p>显然与预期结果相差还不少。原因就在于i++这个操作不具有原子性。</p>
+<p>那么采用 AtomicInteger 包装之后呢？</p>
+<pre><code>package lee;
+
+import java.util.concurrent.atomic.AtomicInteger;
+
+public class Atomic {
+    private static AtomicInteger i = new AtomicInteger(0);
+    private static final int THREAD_NUM = 50;
+    public static void increase() {
+        i.getAndIncrement();
+    }
+    public static void main(String[] args) {
+        // AtomicInteger ai = new AtomicInteger();
+        Thread[] threads = new Thread[THREAD_NUM];
+        for(int i = 0; i &lt; THREAD_NUM; i++) {
+            threads[i] = new Thread(new Runnable() {
+                public void run() {
+                    for(int i = 0; i &lt; 100000; i++) {
+                        increase();
+                    }
+                }
+            });
+            threads[i].start();
+        }
+
+
+        while( Thread.activeCount() &gt; 1)
+            Thread.yield();
+        System.out.println(&quot;累加的结果是：&quot; + i);
+    }
+
+}
+</code></pre><p>结果是：</p>
+<pre><code>累加的结果是：5000000
+</code></pre><p>可以看出来 getAndIncrement() 这个方法确实具有原子性。</p>
+<p>看一下它的源码是怎么实现的？</p>
+<pre><code>public final int getAndIncrement() {
+    for (;;) {
+        int current = get();
+        int next = current + 1;
+        if (compareAndSet(current, next))
+            return current;
+    }
+}
+</code></pre><p>此方法在一个无限循环中，不断尝试将一个比当前值大1的新值赋给自己，如果失败了，那说明在执行“获取-设置”操作时，已经有了修改，于是再次循环进行下一步操作，直到设置成功为止。</p>
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2015/09/04/Concurrent-包概览/" title="Concurrent 包概览" class="prev">PREV</a><a href="/2015/09/03/CAS-原理/" title="CAS 原理" class="next">NEXT</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

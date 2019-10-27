@@ -1,0 +1,393 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.9.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> 设计模式之状态模式 · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="设计模式之状态模式 - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">设计模式之状态模式</h1><div class="post-info">2015-09-09<p class="visit"><i data-identity="2015/09/09/设计模式之状态模式/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><h3 id="简述"><a href="#简述" class="headerlink" title="简述"></a>简述</h3><p>先看维基百科上的一段定义：</p>
+<blockquote>
+<p>The state pattern, which closely resembles Strategy Pattern, is a behavioral software design pattern, also known as the objects for states pattern. This pattern is used in computer programming to encapsulate varying behavior for the same object based on its internal state. This can be a cleaner way for an object to change its behavior at runtime without resorting to large monolithic conditional statements and thus improve maintainability.</p>
+</blockquote>
+<p>状态模式酷似策略模式，是一种行为软件设计模式。这种模式用于封装对象基于其内部状态的不同行为。这可能是一种更为简洁的行为对于对象来改变其运行时的行为，而不是诉诸大量的条件语句因此提高了其可维护性。</p>
+<p>在软件开发过程中，应用程序可能会根据不同的情况作出不同的处理。最直接的解决方案是将这些所有可能发生的情况全都考虑到。然后使用if… ellse语句来做状态判断来进行不同情况的处理。但是对复杂状态的判断就显得“力不从心了”。随着增加新的状态或者修改一个状体（if else(或switch case)语句的增多或者修改）可能会引起很大的修改，而程序的可读性，扩展性也会变得很弱。维护也会很麻烦。那么我就考虑只修改自身状态的模式。</p>
+<blockquote>
+<p>例子1：按钮来控制一个电梯的状态，一个电梯开们，关门，停，运行。每一种状态改变，都有可能要根据其他状态来更新处理。例如，开门状体，你不能在运行的时候开门，而是在电梯定下后才能开门。</p>
+<p>例子2：我们给一部手机打电话，就可能出现这几种情况：用户开机，用户关机，用户欠费停机，用户消户等。 所以当我们拨打这个号码的时候：系统就要判断，该用户是否在开机且不忙状态，又或者是关机，欠费等状态。但不管是那种状态我们都应给出对应的处理操作。</p>
+</blockquote>
+<p>在下面的两种情况下均可使用State模式:</p>
+<p>1)一个对象的行为取决于它的状态, 并且它必须在运行时刻根据状态改变它的行为。</p>
+<p>2)代码中包含大量与对象状态有关的条件语句:一个操作中含有庞大的多分支的条件（if else(或switch case)语句，且这些分支依赖于该对象的状态。这个状态通常用一个或多个枚举常量表示。通常 , 有多个操作包含这一相同的条件结构。 State模式将每一个条件分支放入一个独立的类中。这使得你可以根据对象自身的情况将对象的状态作为一个对象，这一对象可以不依赖于其他对象而独立变化。</p>
+<h3 id="UML图"><a href="#UML图" class="headerlink" title="UML图"></a>UML图</h3><p><img src="http://i.imgur.com/R5y2owh.png" alt></p>
+<p>可以看到组成元素：</p>
+<p>环境类（Context）:  定义客户感兴趣的接口。维护一个ConcreteState子类的实例，这个实例定义当前状态。</p>
+<p>抽象状态类（State）:  定义一个接口以封装与Context的一个特定状态相关的行为。</p>
+<p>具体状态类（ConcreteState）:  每一子类实现一个与Context的一个状态相关的行为。</p>
+<h3 id="代码实例"><a href="#代码实例" class="headerlink" title="代码实例"></a>代码实例</h3><p>下面一个例子模拟了实际的交通灯的情景：</p>
+<pre><code>package com.ans;
+
+interface State {
+    public void change(Light light);
+}
+
+class Light {
+    private State state;
+
+    private void change() {
+        state.change(this);
+    }
+
+    public void work() {
+        while (true) {
+            change();
+        }
+    }
+
+    public void setState(State state) {
+        this.state = state;
+    }
+}
+
+class GreenState implements State {
+    public void change(Light light) {
+        try {
+            System.out.println(&quot;现在是绿灯，放行&quot;);
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        light.setState(new YellowState());
+    }
+}
+
+class RedState implements State {
+    public void change(Light light) {
+        try {
+            System.out.println(&quot;现在是红灯，禁行&quot;);
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        light.setState(new GreenState());
+    }
+
+}
+
+class YellowState implements State {
+    public void change(Light light) {
+        try {
+            System.out.println(&quot;现在是黄灯，等待&quot;);
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        light.setState(new RedState());
+    }
+}
+
+public class StatePattern {
+
+    public static void main(String[] args) {
+        Light light = new Light();
+        light.setState(new GreenState());// 初始化为绿灯状态
+        light.work();
+    }
+
+}
+</code></pre><p>运行结果：</p>
+<pre><code>现在是绿灯，放行
+现在是黄灯，等待
+现在是红灯，禁行
+现在是绿灯，放行
+现在是黄灯，等待
+现在是红灯，禁行
+</code></pre><p>下面是一个电梯的例子：</p>
+<pre><code>package com.ans;
+
+abstract class LiftState {
+    public abstract void open();
+
+    public abstract void close();
+
+    public abstract void stop();
+
+    public abstract void run();
+}
+
+class OpenState extends LiftState {
+    public void close() {
+        System.out.println(&quot;Lift is ready to close&quot;);
+    }
+
+    @Override
+    public void open() {
+        System.out.println(&quot;Lift is opening..&quot;);
+    }
+
+    @Override
+    public void stop() {
+
+    }
+
+    @Override
+    public void run() {
+        System.out.println(&quot;cannot run at this time&quot;);
+    }
+}
+
+class CloseState extends LiftState {
+
+    @Override
+    public void open() {
+        // do nothing
+
+    }
+
+    @Override
+    public void close() {
+        System.out.println(&quot;Lift is ready to close&quot;);
+
+    }
+
+    @Override
+    public void stop() {
+        System.out.println(&quot;Lift is ready to stop&quot;);
+    }
+
+    @Override
+    public void run() {
+        System.out.println(&quot;Lift is ready to run&quot;);
+    }
+
+}
+
+class StopState extends LiftState {
+
+    @Override
+    public void open() {
+        // TODO Auto-generated method stub
+        System.out.println(&quot;Lift is ready to open&quot;);
+    }
+
+    @Override
+    public void close() {
+        // do nothing
+
+    }
+
+    @Override
+    public void stop() {
+        System.out.println(&quot;Lift is ready to stop&quot;);
+
+    }
+
+    @Override
+    public void run() {
+        System.out.println(&quot;Lift is ready to run&quot;);
+
+    }
+
+}
+
+class RunningState extends LiftState {
+
+    @Override
+    public void open() {
+        // do nothing
+        System.out.println(&quot;Cannot open at this time&quot;);
+    }
+
+    @Override
+    public void close() {
+        // do nothing
+
+    }
+
+    @Override
+    public void stop() {
+        System.out.println(&quot;Lift is ready to stop&quot;);
+
+    }
+
+    @Override
+    public void run() {
+        System.out.println(&quot;Lift is ready to run&quot;);
+
+    }
+
+}
+
+class Context {
+    // define all states of a lift
+    private LiftState state;
+
+    public void setState(LiftState state) {
+        this.state = state;
+    }
+
+    public void open() {
+        state.open();
+    }
+
+    public void close() {
+        state.close();
+    }
+
+    public void stop() {
+        state.stop();
+    }
+
+    public void run() {
+        state.run();
+    }
+
+}
+
+public class StatePattern {
+
+    public static void main(String[] args) {
+        Context ctxt = new Context();
+        ctxt.setState(new StopState());
+        ctxt.open();
+        ctxt.stop();
+        ctxt.close();
+        ctxt.run();
+    }
+
+}
+</code></pre><p>其UML图如下：</p>
+<p><img src="http://i.imgur.com/AhxSutM.png" alt></p>
+<p>可以看出来，状态模式的 Context 的作用就是与客户端进行交互，其内部也有所有的操作，然后内部的实现交给了各种状态对象。</p>
+<p>状态模式避免了大量的if-else判断，将各种状态变为各种独立的类，这样就可以在每个单独的类中考虑问题。</p>
+<p>可以看出来其与策略模式非常得相似，那么它们二者有什么区别呢？</p>
+<p>对状态进行建模时，<strong>状态迁移</strong>是一个核心内容，比如上面的红绿灯的例子；然而，在选择策略时，迁移与此毫无关系。另外，策略模式允许一个客户选择或提供一种策略，而这种思想在状态模式中完全没有。</p>
+<p>个人理解：状态模式重在状态的转换来模拟一个事件，而策略模式重在策略替换来模拟一个事件。</p>
+<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><p>状态模式的主要优点在于封装了转换规则，并枚举可能的状态，它将所有与某个状态有关的行为放到一个类中，并且可以方便地增加新的状态，只需要改变对象状态即可改变对象的行为，还可以让多个环境对象共享一个状态对象，从而减少系统中对象的个数；</p>
+<p>其缺点在于使用状态模式会增加系统类和对象的个数，且状态模式的结构与实现都较为复杂，如果使用不当将导致程序结构和代码的混乱，对于可以切换状态的状态模式不满足“开闭原则”的要求。</p>
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2015/09/09/设计模式之责任链模式/" title="设计模式之责任链模式" class="prev">PREV</a><a href="/2015/09/08/和为s的两个数字-vs-和为s的连续数列/" title="和为s的两个数字 vs 和为s的连续数列" class="next">NEXT</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

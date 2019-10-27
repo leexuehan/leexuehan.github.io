@@ -1,0 +1,214 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.9.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> Tomcat 与 Servlet · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Tomcat 与 Servlet - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">Tomcat 与 Servlet</h1><div class="post-info">2015-07-22<p class="visit"><i data-identity="2015/07/22/Tomcat-与-Servlet/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><p>这篇博客将以Tomcat为例讲一讲Servlet的原理</p>
+<h2 id="Servlet容器"><a href="#Servlet容器" class="headerlink" title="Servlet容器"></a>Servlet容器</h2><p>Servlet与Servlet容器的关系举个不恰当的例子就像枪和子弹的关系。而Servlet就是子弹，容器就是枪。子弹都有统一的标准，枪却各有各的不同。</p>
+<p>所以Servlet只是个标准，但是容器却各有不同。比较流行的有Jetty，用于移动领域。但是最为熟悉的还是Tomcat。</p>
+<p>本博客的所有实现的描述，都是基于Tomcat的。</p>
+<p>先看一张Tomcat容器的模型图</p>
+<p><img src="https://cloud.githubusercontent.com/assets/12984324/8826213/836bacd6-30b7-11e5-987b-f64ad9c96c39.png" alt="6-29-1"></p>
+<p>从图中可以看出，Tomcat容器分为四个等级：Container,Engine,Host,Context。<br>真正管理Servlet的容器是Context.一个Context对应一个Web工程。</p>
+<h2 id="Tomcat容器的启动"><a href="#Tomcat容器的启动" class="headerlink" title="Tomcat容器的启动"></a>Tomcat容器的启动</h2><h3 id="大概过程"><a href="#大概过程" class="headerlink" title="大概过程"></a>大概过程</h3><p>1.获取Tomcat实例</p>
+<pre><code>Tomcat tomcat = getTomcatInstance();
+
+/**
+从Tomcat 7开始支持嵌入式功能，增加了一个启动类：
+    org.apache.catalina.startup.Tomcat
+除此之外，还可以调用该对象的方法来增加和修改
+Tomcat的配置参数，如动态增加Context、Servlet*/
+</code></pre><p>2.添加应用到容器中</p>
+<pre><code>File appDir = new File(xxxxx);
+tomcat.addWebapp(xxxxxxxx);
+/**
+    添加一个Web应用将会创建一个StandardContext容器，并且会
+    给这个Context容器设置必要的参数，如url和path。最重要的
+    一个配置是ContextConfig，这个类将会负责整个Web应用配置
+    的解析工作。然后将这个容器加入父容器Host中。
+    */
+</code></pre><p>3.启动Tomcat(核心)</p>
+<pre><code>tomcat.start();
+/*
+Tomcat的启动逻辑是基于观察者模式设计的，所有的容器都会继承
+Lifecycle接口。它管理着容器的整个生命周期，所有的容器的修改
+和状态的改变都会由它去通知已经注册的观察者（Listener）。*/
+</code></pre><p>Tomcat的启动过程较为复杂，关键点是<strong>StandardContext的初始化</strong>，<br>当Context初始化状态设为init时，添加到Context的容器的Listener，即ContextConfig将会被调用（ContextConfig继承了LifecycleListener接口，在调用Tomcat.addWebapp时被加入到StandardContext容器中，负责整个Web应用的配置文件的解析工作）。</p>
+<p>ContextConfig将会完成对于每个Web应用项目的配置解析和Web应用的初始化工作：</p>
+<pre><code>ContextConfig的init方法将会完成以下工作：
+
+- 创建用于解析XML配置文件的contextDigester对象。
+
+- 读取默认的context.xml文件，如果存在就解析它。
+
+- 读取默认的host配置文件，如果存在就解析它。
+
+- 读取默认的Context自身配置文件，如果存在就解析它。
+
+- 设置Context的Docbase
+
+ContextConfig的configureStart方法实现Web应用的初始化工作：主要是完成web.xml文件（这里不单单指应用的web.xml）
+的解析。之后会将Web.xml中对象的属性设置到Context容器中，
+包括创建Servlet对象、filter、Listener等。
+这里会将Servlet包装成Context容器中的StandardWrapper(因为StandardWrapper是容器的一部分，
+具有容器的特征，而Servlet是一个独立的开发标准，不应该耦合在Tomcat中)。
+从这里可以看到Context的重要性了：
+web.xml属性都解析到Context中，所以Context容器才是真正运行Servlet的Servlet容器。
+</code></pre><h2 id="Servlet实例的创建"><a href="#Servlet实例的创建" class="headerlink" title="Servlet实例的创建"></a>Servlet实例的创建</h2><p>在上面的Tomcat启动过程中，已经完成了Servlet的解析工作，并且被包装成StandardWrapper添加在Context中，但是因为它没有被实例化，所以仍然不能为我们工作。下面主要讲Servlet是如何创建以及初始化的：</p>
+<h3 id="创建Servlet对象"><a href="#创建Servlet对象" class="headerlink" title="创建Servlet对象"></a>创建Servlet对象</h3><p>如果Servlet的load-on-startup配置项大于0，则在Context容器的启动过程中就会被实实例化。在web.xml文件中定义了两个Servlet：</p>
+<p>org.apache.catalina.DefaultServlet和 org.apache.jasper.servlet.JspServlet</p>
+<p>创建Servlet实例的方法从Wrapper.loadServlet开始，此方法要获取servletClass然后将它交给InstanceManager去创建一个基于servletClass.class的对象。</p>
+<h3 id="初始化Servlet"><a href="#初始化Servlet" class="headerlink" title="初始化Servlet"></a>初始化Servlet</h3><p>初始化的方法在StandardWrapper的initServlet方法中。此方法调用Servlet的init()方法，同时把包装了StandardWrapper对象的StandardWrapperFacade作为ServletConfig传给Servlet。</p>
+<p>如果该实例关联的是一个JSP文件，则初始化JspServlet，接下来会模拟一次简单的请求，调用这个JSP文件，来编译之，初始化之。</p>
+<h2 id="Servlet的体系结构"><a href="#Servlet的体系结构" class="headerlink" title="Servlet的体系结构"></a>Servlet的体系结构</h2><p>Servlet的运行模式是一个典型的“握手型交互式模式”。</p>
+<blockquote>
+<p>所谓的“握手型交互式模式”，即两个模块为了交换数据通常都会准备一个交易场景，这个场景一直跟随这个交易指导这个交易完成为止。这个交易的场景的初始化就是根据这次交易对象指定的参数来定制的，这些指定参数通常是一些配置类。</p>
+</blockquote>
+<p>交易场景由ServletContext来描述，定制参数集合由ServletConfig来描述。ServletRequest和ServletResponse就是要交互的具体对象。</p>
+<p>##Servlet如何工作<br>用户通过url向服务器发起请求，服务器如何根据此url映射到正确的Servlet容器呢？</p>
+<p>在Tomcat7中，这种映射工作由一个专门的类来完成，即org.apache.tomcat.util.http.mapper<br>此类保存了Tomcat的Container容器的所有子容器的信息。</p>
+<p>那么Mapper类怎么会有容器的完整关系？</p>
+<p>因为MapperListener类作为监听者把加到整个Container容器的每个子容器中，这样只要任何一个容器发生变化，MapperListener都会被通知到。相应的保存容器关系的MapperListener的mapper属性页会被修改。</p>
+<blockquote>
+<p>现在的Web应用很少直接将交互的页面全部用Servlet来实现，而是采用更加高效的MVC框架来实现。这些MVC框架的基本原理就是将所有的请求都映射到一个Servlet，然后去实现Service方法，这个方法也是MVC框架的入口。</p>
+</blockquote>
+<h2 id="Filter如何工作？"><a href="#Filter如何工作？" class="headerlink" title="Filter如何工作？"></a>Filter如何工作？</h2><p>在Tomcat容器中，FilterConfig和FilterChain的实现类分别是ApplicationFilterConfig和ApplicationFilterChain，而Filter的实现类由用户自己定义，只要实现Filter接口定义的三个方法就行。</p>
+<ul>
+<li><p>init():初始化接口</p>
+</li>
+<li><p>doFilter(ServletRequest,ServletResponse,FilterChain):在每个用户请求进来时，这个方法都会被调用，并且在Service方法之前。Filter采用的责任链模式。</p>
+</li>
+<li><p>destroy:当filter对象被销毁时，此方法被调用。</p>
+</li>
+</ul>
+<hr>
+<p>至此，Servlet系列的博客算是告一段落了，后面有时间，会继续往深处挖，探究其奥秘。</p>
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2015/07/23/DeadLock/" title="DeadLock" class="prev">PREV</a><a href="/2015/07/22/Session-Cookie/" title="Session &amp;&amp; Cookie " class="next">NEXT</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

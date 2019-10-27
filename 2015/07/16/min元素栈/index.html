@@ -1,0 +1,249 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.9.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> min元素栈 · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="min元素栈 - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">min元素栈</h1><div class="post-info">2015-07-16<p class="visit"><i data-identity="2015/07/16/min元素栈/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><h2 id="剑指offer面试题系列"><a href="#剑指offer面试题系列" class="headerlink" title="剑指offer面试题系列"></a>剑指offer面试题系列</h2><blockquote>
+<p>题目：定义栈的数据结构，请在该类型中实现一个能够得到栈的最小元素 min 函数，在该栈中，调用 min，push，pop 的时间复杂度都是 O(1).</p>
+</blockquote>
+<h3 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h3><p>刚拿到题的时候，想了半天，觉得如果用一个栈来实现，怎么也不可能达到调用min的时间复杂度为O(1),于是考虑建立一个辅助栈来存放min元素。就在这里没有想通，当时这么想：即使用一个辅助栈来存放最小的元素，那岂不意味着每次向主栈压入一个元素时，都需要把该元素压入辅助站的适当位置？然后出栈时也面临这样一个问题：如果从出栈中弹出一个元素，那么辅助栈中也需要将相应的元素弹出来。（当时想着主栈和辅助栈中的元素应该是一对一的关系，即辅助站中存放的是排序后的主栈元素，真笨！）</p>
+<p>其实，完全没有必要这么麻烦的实现。<strong>在主栈中设置一个成员变量来保存当前栈的最小元素，每次向主栈压入元素时，只需要比较这个元素和最小值的大小即可，如果小于最小值，则更新之，如果没有小于最小值，则在辅助栈中再次压入一个最小值元素即可。</strong></p>
+<p>出栈时，只需要主栈中弹出一个元素，辅助栈中也弹出一个元素即可。</p>
+<p><strong>想起一个不太恰当的比喻：决定一个团队的上限，永远是精英人物，哈哈。精英人物少一个，团队层次就下降一档</strong></p>
+<h3 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h3><pre><code>package com.study;
+
+/*
+ * 最小元素栈
+ * 要求pop/push/min的算法复杂度均为O(1)
+ * */
+
+class AuxiliaryStack {  //一个辅助栈
+    private int top = 0;
+    private static final int MAXSIZE = 10;
+    private int[] arr = new int[MAXSIZE];
+
+    public int getTopElement() {
+        if (top - 1 &lt; 0) {
+            System.out.println(&quot;Stack is Empty&quot;);
+            return -1;
+        }
+        return arr[top - 1];
+    }
+
+    public void push(int data) {
+        if (top &lt; MAXSIZE) {
+            arr[top++] = data;
+        } else {
+            System.out.println(&quot;The Stack is full.&quot;);
+        }
+    }
+
+    public int pop() {
+        if (top == 0) {
+            System.out.println(&quot;The Stack is already empty&quot;);
+            return -1;
+        }
+        return arr[--top];
+    }
+}
+
+class MinStack {    //取得最小元素的栈
+    private static final int MAXSIZE = 10;
+
+    private int min = 0;
+
+    private AuxiliaryStack astack = new AuxiliaryStack(); // 辅助栈
+
+    private int point = 0; // 指向栈顶
+
+    private int[] arr = new int[MAXSIZE];
+
+    public int getElementNum() { // 获取当前的栈的容量
+        return point;
+    }
+
+    public int getMinData() { // 获取最小元素
+        return astack.getTopElement();
+    }
+
+    public void push(int data) {
+        if (point == 0) { // Empty Stack
+            min = data;
+            arr[point++] = min;
+            astack.push(data);
+            return;
+        }
+
+        if (point &lt; MAXSIZE) {
+            if (data &lt; min) {
+                min = data;
+                astack.push(data);
+            } else {
+                astack.push(min);
+            }
+            arr[point++] = data;
+        } else {
+            System.out.println(&quot;The stack is full&quot;);
+        }
+    }
+
+    public int pop() {
+        if (point &gt; 0) {
+            astack.pop();
+            point--;
+            return arr[point];
+        } else {
+            System.out.println(&quot;The stack is empty&quot;);
+            return -1;
+        }
+    }
+
+}
+
+public class suanfa13 {
+    public static void main(String[] args) {
+        int[] arr = { 4, 7, 8, 3, 5, 2, 1 };
+        int i = 0;
+        MinStack mstack = new MinStack();
+        while (i &lt; arr.length) {
+            mstack.push(arr[i]);
+            i++;
+        }
+        System.out.println(&quot;入栈成功&quot;);
+
+        while (i &gt; 0) {
+            System.out.println(&quot;现在最小的元素是：&quot; + mstack.getMinData());
+            System.out.println(&quot;出栈元素为：&quot; + mstack.pop());
+            i--;
+        }
+    }
+}
+</code></pre></div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2015/07/16/判定栈的弹出序列/" title="判定栈的弹出序列" class="prev">PREV</a><a href="/2015/07/15/Java并发之生产者消费者/" title="Java并发之生产者消费者" class="next">NEXT</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

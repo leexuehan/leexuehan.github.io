@@ -1,0 +1,333 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.9.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> XWork 容器原理（二） · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="XWork 容器原理（二） - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">XWork 容器原理（二）</h1><div class="post-info">2015-07-27<p class="visit"><i data-identity="2015/07/27/XWork-容器原理（二）/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><h2 id="XWork宏观视图"><a href="#XWork宏观视图" class="headerlink" title="XWork宏观视图"></a>XWork宏观视图</h2><h3 id="数据流体系"><a href="#数据流体系" class="headerlink" title="数据流体系"></a>数据流体系</h3><blockquote>
+<p>ActionContext 和 ValueStack 之间的关系是从属关系。</p>
+</blockquote>
+<p><img src="http://i.imgur.com/kmElK5E.png" alt></p>
+<p>上图是一个ActionContext类的一个视图轮廓。从图中可以看出，ActionContext实现的功能应有尽有，包括设置ValueStack和Container等等。</p>
+<p>对于XWork框架对象的访问：getContainer，getValueStack，getActionInvocation。</p>
+<p>对于数据对象的访问：getSession，getApplication，getParameters。</p>
+<blockquote>
+<p>ActionContext 是 XWork 的数据流实现元素，作为一个数据载体，既负责数据存储，也负责数据共享。</p>
+</blockquote>
+<p>ValueStack是一个具备表达式引擎计算能力的数据结构，表达式引擎的引入就是为了解决数据访问和数据传输的困境。</p>
+<h4 id="数据存储"><a href="#数据存储" class="headerlink" title="数据存储"></a>数据存储</h4><pre><code>public class ActionContext implements Serializable {
+
+    private Map&lt;String, Object&gt; context;
+
+    /**
+     * Creates a new ActionContext initialized with another context.
+     *
+     * @param context a context map.
+     */
+    public ActionContext(Map&lt;String, Object&gt; context) {
+        this.context = context;
+    }
+
+    ....    
+
+}
+</code></pre><p>ActionContext 真正的存储空间是位于内部一个Map类型的变量 context。ActionContext 将所有的数据对象以特定的键值（Key）存储于context之中。而与此同时ActionContext也提供了存取这些对象的方式。</p>
+<h4 id="数据共享"><a href="#数据共享" class="headerlink" title="数据共享"></a>数据共享</h4><p>数据共享涉及一个线程安全的问题。</p>
+<pre><code>public class ActionContext implements Serializable {
+
+    static ThreadLocal&lt;ActionContext&gt; actionContext = new ThreadLocal&lt;ActionContext&gt;();
+
+      public static void setContext(ActionContext context) {
+        actionContext.set(context);
+    }
+
+
+    public static ActionContext getContext() {
+        return actionContext.get();
+    }
+
+    ....    
+
+}
+</code></pre><p>从上面的源码中可以看出，在ActionContext 内部封装了一个静态的ThreadLocal的实例。使用ThreadLocal模式解决了多线程访问的问题。</p>
+<h4 id="ValueStack"><a href="#ValueStack" class="headerlink" title="ValueStack"></a>ValueStack</h4><p>OGNL的三要素：Root对象，环境，表达式。说的通俗一点就是：对谁（Root对象）在哪儿（上下文环境）做什么（表达式）。</p>
+<p>ValueStack的数据结构：</p>
+<pre><code>public interface ValueStack {
+
+    public abstract CompoundRoot getRoot();
+
+    public abstract Object peek();
+
+    public abstract Object pop();
+
+    public abstract void push(Object o);
+
+    public abstract void set(String key, Object o);
+
+    public abstract int size();
+
+    ....
+}
+</code></pre><p>ValueStack被定义为一个接口而不是实现类。真正的实现类：OgnlValueStack.</p>
+<pre><code>public class OgnlValueStack implements Serializable, ValueStack, ClearableValueStack, MemberAccessValueStack 
+{
+    protected OgnlValueStack(ValueStack vs, XWorkConverter xworkConverter, CompoundRootAccessor accessor, boolean allowStaticAccess) 
+    {
+        setRoot(xworkConverter, accessor, new CompoundRoot(vs.getRoot()), allowStaticAccess);
+    }
+
+    protected void setRoot(XWorkConverter xworkConverter, CompoundRootAccessor accessor, CompoundRoot compoundRoot,
+                           boolean allowStaticMethodAccess) 
+    {
+        this.root = compoundRoot;
+        this.securityMemberAccess = new SecurityMemberAccess(allowStaticMethodAccess);
+        this.context = Ognl.createDefaultContext(this.root, accessor, new OgnlTypeConverterWrapper(xworkConverter), securityMemberAccess);
+        context.put(VALUE_STACK, this);
+        Ognl.setClassResolver(context, accessor);
+        ((OgnlContext) context).setTraceEvaluations(false);
+        ((OgnlContext) context).setKeepLastEvaluation(false);
+    }
+
+    ....
+
+}
+</code></pre><p>在这里，OgnlValueStack使用了一个装饰器模式，真正在内部起核心作用的是一个叫做 CompoundRoot 的数据结构。这个结构的源代码如下：</p>
+<pre><code>public class CompoundRoot extends ArrayList {
+
+    public CompoundRoot() {
+    }
+
+    public CompoundRoot(List list) {
+        super(list);
+    }
+
+
+    public CompoundRoot cutStack(int index) {
+        return new CompoundRoot(subList(index, size()));
+    }
+
+    public Object peek() {
+        return get(0);
+    }
+
+    public Object pop() {
+        return remove(0);
+    }
+
+    public void push(Object o) {
+        add(0, o);
+    }
+}
+</code></pre><p>可以看出，CompoundRoot继承了一个ArrayList的数据结构。</p>
+<pre><code>public class OgnlValueStackFactory implements ValueStackFactory {
+
+    private XWorkConverter xworkConverter;
+    private CompoundRootAccessor compoundRootAccessor;
+    private TextProvider textProvider;
+    private Container container;
+    private boolean allowStaticMethodAccess;
+
+    @Inject
+    public void setXWorkConverter(XWorkConverter conv) {
+        this.xworkConverter = conv;
+    }
+
+    @Inject(&quot;system&quot;)
+    public void setTextProvider(TextProvider textProvider) {
+        this.textProvider = textProvider;
+    }
+
+    @Inject(value=&quot;allowStaticMethodAccess&quot;, required=false)
+    public void setAllowStaticMethodAccess(String allowStaticMethodAccess) {
+        this.allowStaticMethodAccess = &quot;true&quot;.equalsIgnoreCase(allowStaticMethodAccess);
+    }
+
+    public ValueStack createValueStack() {
+        ValueStack stack = new OgnlValueStack(xworkConverter, compoundRootAccessor, textProvider, allowStaticMethodAccess);
+        container.inject(stack);
+        stack.getContext().put(ActionContext.CONTAINER, container);
+        return stack;
+    }
+
+    public ValueStack createValueStack(ValueStack stack) {
+        ValueStack result = new OgnlValueStack(stack, xworkConverter, compoundRootAccessor, allowStaticMethodAccess);
+        container.inject(result);
+        stack.getContext().put(ActionContext.CONTAINER, container);
+        return result;
+    }
+
+    @Inject
+    public void setContainer(Container container) throws ClassNotFoundException {
+        Set&lt;String&gt; names = container.getInstanceNames(PropertyAccessor.class);
+        for (String name : names) {
+            Class cls = Class.forName(name);
+            if (cls != null) {
+                if (Map.class.isAssignableFrom(cls)) {
+                    PropertyAccessor acc = container.getInstance(PropertyAccessor.class, name);
+                }
+                OgnlRuntime.setPropertyAccessor(cls, container.getInstance(PropertyAccessor.class, name));
+                if (compoundRootAccessor == null &amp;&amp; CompoundRoot.class.isAssignableFrom(cls)) {
+                    compoundRootAccessor = (CompoundRootAccessor) container.getInstance(PropertyAccessor.class, name);
+                }
+            }
+        }
+
+        names = container.getInstanceNames(MethodAccessor.class);
+        for (String name : names) {
+            Class cls = Class.forName(name);
+            if (cls != null) {
+                OgnlRuntime.setMethodAccessor(cls, container.getInstance(MethodAccessor.class, name));
+            }
+        }
+
+        names = container.getInstanceNames(NullHandler.class);
+        for (String name : names) {
+            Class cls = Class.forName(name);
+            if (cls != null) {
+                OgnlRuntime.setNullHandler(cls, new OgnlNullHandlerWrapper(container.getInstance(NullHandler.class, name)));
+            }
+        }
+        if (compoundRootAccessor == null) {
+            throw new IllegalStateException(&quot;Couldn&apos;t find the compound root accessor&quot;);
+        }
+        this.container = container;
+    }
+}
+</code></pre><p>观察上面的源代码发现，原来OgnlValueStack是通过OgnlValueStackFactory 创建出来的，在其对 ValueStack进行初始化的过程中，会为OGNL的计算指定许多默认的实现方式。所有的初始化工作都在其中完成，由于OGNL的运行参数都属于 Struts2/Work 需要定义的内置变量，因而选择了在实施依赖注入时（在setContainer方法中），完成这些参数的实现方式的选择和设置。</p>
+<blockquote>
+<p>ValueStack 是XWork框架中的核心元素之一，是 XWork 框架进行 OGNL 计算的实际场所，也是整个框架进行数据访问的基础。</p>
+</blockquote>
+<p>在XWork的框架范围之内，如果要针对某一对象进行表达式引擎的计算，只要将这个对象置于 ValueStack 之中，通过其计算接口进行操作即可。</p>
+<h3 id="控制流体系"><a href="#控制流体系" class="headerlink" title="控制流体系"></a>控制流体系</h3><p>控制流体系从元素构成上要比数据流复杂得多。在其中，有两层关系值得探讨：事件处理节点与事件驱动元素之间的关系以及事件处理节点和辅助事件处理节点之间的关系。</p>
+<h4 id="事件处理节点与驱动元素"><a href="#事件处理节点与驱动元素" class="headerlink" title="事件处理节点与驱动元素"></a>事件处理节点与驱动元素</h4><p>在XWork的控制流中，事件处理驱动元素对于事件处理节点元素形成调用关系。</p>
+<p>ActionInvocation 对于事件处理节点的执行调度，是整个XWork控制流体系运行的核心。因为每个事件处理节点都被定义为接口。<strong>使用XWork进行事件处理的过程就是对每个事件处理节点的实例化过程。</strong>但是无论如何定义和扩展这些节点，都离不开 ActionInvocation 的统一调度执行。</p>
+<h4 id="事件处理节点和辅助事件处理节点"><a href="#事件处理节点和辅助事件处理节点" class="headerlink" title="事件处理节点和辅助事件处理节点"></a>事件处理节点和辅助事件处理节点</h4><p>Interceptor和Action之间形成了一个包裹结构。Action外面包着层层Interceptor，在计算机语言中是一个栈结构。通常把Action和Interceptor之间所表现出来的栈特性叫<strong>XWork执行栈</strong>。</p>
+<p>ActionInvocation 在对事件处理节点进行逻辑调用时，是将Action与Interceptor这两大元素捆绑在一起进行调度的。</p>
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2015/07/27/XWork-容器原理（三）/" title="XWork 容器原理（三）" class="prev">PREV</a><a href="/2015/07/27/XWork-容器原理（一）/" title="XWork 容器原理（一）" class="next">NEXT</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

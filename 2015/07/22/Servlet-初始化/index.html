@@ -1,0 +1,270 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.9.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> Servlet 初始化 · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Servlet 初始化 - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">Servlet 初始化</h1><div class="post-info">2015-07-22<p class="visit"><i data-identity="2015/07/22/Servlet-初始化/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><h3 id="如何获取初始化参数"><a href="#如何获取初始化参数" class="headerlink" title="如何获取初始化参数"></a>如何获取初始化参数</h3><p>容器在初始化的时候，会为了这个Servlet创建一个唯一的ServletConfig，容器会从DD读出Servlet的初始化参数，并把这个参数交给ServletConfig，然后ServletConfig传递给Servlet的init()方法。</p>
+<font color="red">这样做的好处就是当你需要更改某个参数的值时，只要在配置文件中更改即可，如果是在Servlet中硬编码，则需要重新编译。</font>
+
+<blockquote>
+<p>在DD文件中这样配置</p>
+</blockquote>
+<blockquote>
+<pre><code>&lt;servlet&gt;
+      &lt;servlet-name&gt;name&lt;/servlet-name&gt;
+      &lt;servlet-class&gt;class-name&lt;/servlet-class&gt; 
+
+      &lt;init-param&gt;
+           &lt;param-name&gt;name&lt;/param-name&gt;      
+           &lt;param-value&gt;value&lt;/param-value&gt;
+      &lt;/init-param&gt;
+&lt;/servlet&gt;
+</code></pre></blockquote>
+<blockquote>
+<p>在Servlet代码中只要这样调用就行：</p>
+</blockquote>
+<blockquote>
+<pre><code>out.println(getServletConfig().getInitParameter(&quot;name&quot;));
+</code></pre></blockquote>
+<p><strong>注意：获得此参数的时机：不要在Servlet的构造函数中调用此方法，因为这时候还没有执行init方法，所以没有ServletConfig。</strong></p>
+<h3 id="JSP能不能获取到Servlet初始化参数"><a href="#JSP能不能获取到Servlet初始化参数" class="headerlink" title="JSP能不能获取到Servlet初始化参数"></a>JSP能不能获取到Servlet初始化参数</h3><p>ServletConfig仅用于Servlet的初始化配置，所以如果想让应用的其他部分也能使用这部分初始化配置信息，则需要别的方法。</p>
+<p>解决办法：</p>
+<p>因为在前面提到过，ServletContext是整个web应用的参数，所以无论Servlet还是JSP都能访问到，所以在这里配置，应该是极好的。</p>
+<blockquote>
+<pre><code>&lt;Servlet&gt;
+     ............
+&lt;/servlet&gt;
+  //注意不能嵌套在上面的Servlet配置里面。
+&lt;context-param&gt;
+        &lt;param-name&gt;name&lt;/param-name&gt;
+        &lt;param-value&gt;value&lt;/para-value&gt;
+&lt;/context-param&gt;
+</code></pre></blockquote>
+<p>调用方法：</p>
+<blockquote>
+<pre><code>out.println(getServletContext().getInitParameter(&quot;canshu&quot;));
+</code></pre></blockquote>
+<p><strong>如果应用是分布式应用，则在每一个JVM中都会有一个ServletContext.</strong></p>
+<p>那么问题来了，上面的访问方法时Servlet访问ServletContext的方法，在JSP中有怎么样呢？</p>
+<p>在JSP中有一些所谓的“隐式对象”，其中就包括ServletContext.关于JSP的详细介绍请参见本博客。</p>
+<h3 id="应用初始化参数如果不只是String类型呢，比如DataSource？"><a href="#应用初始化参数如果不只是String类型呢，比如DataSource？" class="headerlink" title="应用初始化参数如果不只是String类型呢，比如DataSource？"></a>应用初始化参数如果不只是String类型呢，比如DataSource？</h3><p>此时需要一个监听器（listener），即监听一个上下文初始化事件，这样就能得到一个上下文初始化参数，并在应用为客户提供服务之前运行一些代码。</p>
+<p>比如获取数据库连接，则需要一个ServletContextListener。它可以建立一个单独的类，不是Servlet或者JSP，用来监听ServletContext的创建和撤销。此类实现了javax.servlet.ServletContextListener</p>
+<p>关于此例，需要做到：</p>
+<ul>
+<li><p>上下文初始化（应用部署中）得到通知</p>
+<p>  从ServletContext得到上下文初始化参数；</p>
+<p>  从初始化参数查找名建立一个数据库连接</p>
+<p>  把数据库连接存储为一个属性，使得Web应用的各个部分都能访问</p>
+</li>
+<li><p>上下文撤销时，得到通知</p>
+<p>  关闭数据库连接</p>
+</li>
+<li><p>代码段</p>
+</li>
+</ul>
+<blockquote>
+<pre><code>import javax.servlet.*;
+</code></pre></blockquote>
+<blockquote>
+<pre><code>public class MyServletContextListener implements ServletContextListener {
+</code></pre></blockquote>
+<blockquote>
+<pre><code>public void contextInitialized(ServletContextEvent event)    {    
+     //code to initialize the database connection
+     //and store it as a context attribute
+}
+</code></pre></blockquote>
+<blockquote>
+<pre><code> public  void contextDestroyed(ServletContextEvent event) {
+ //code to close the database connection
+}
+}
+</code></pre></blockquote>
+<h3 id="如何建立一个上下文监听者"><a href="#如何建立一个上下文监听者" class="headerlink" title="如何建立一个上下文监听者"></a>如何建立一个上下文监听者</h3><p>1.创建一个监听类实现监听接口，并且像上面的代码所示，实现两个方法；</p>
+<p>2.要在web.xml部署文件放一个<listener>元素</listener></p>
+<pre><code>&lt;listener&gt;
+   &lt;listener-class&gt;class&lt;/listener-class&gt;
+&lt;/listener&gt;
+//这个文件要部署到Servlet外面去
+</code></pre><p>注意：通过getAttribute方法获取一个属性时，一定要注意强制转换，因为此方法返回的是一个Object类型。</p>
+<h3 id="除了监听上下文还能监听什么？"><a href="#除了监听上下文还能监听什么？" class="headerlink" title="除了监听上下文还能监听什么？"></a>除了监听上下文还能监听什么？</h3><p>事实上，除了监听上下文事件，还可以监听与上下文属性、Servlet请求和属性，以及HTTP会话和会话属性相关的事情。</p>
+<p>以下列出了八种监听器以及适用场合</p>
+<p><img src="http://i.imgur.com/GUnfQfZ.png" alt></p>
+<h3 id="什么是属性"><a href="#什么是属性" class="headerlink" title="什么是属性"></a>什么是属性</h3><p>上面提到了属性，到底什么是属性呢？</p>
+<p>属性实质就是一个对象，可能设置到或者绑定到ServletContext、HttpServletRequest或者HttpSession对象中的某一个。<br>简言之，就是一个映射实例对象中的键值对(String-Object)。</p>
+<h3 id="属性和参数有什么区别？"><a href="#属性和参数有什么区别？" class="headerlink" title="属性和参数有什么区别？"></a>属性和参数有什么区别？</h3><p>类型不同：属性类型包括应用，请求，会话；参数类型包括应用初始化参数，请求参数，Servlet初始化参数。</p>
+<p>设置方法不同：属性通过setAttribute(String name, Object value)设置；而参数通过DD设置</p>
+<p>返回类型不同：属性返回的是一个对象，参数返回的一个字符串</p>
+<p>获取方法：属性通过getAttribute(String name)获取，参数通过getInitParameter(String name)方法获取。</p>
+<h3 id="属性的API"><a href="#属性的API" class="headerlink" title="属性的API"></a>属性的API</h3><p>上下文、请求和会话都由相应的接口处理，即ServletConfig、ServletRequest和HttpSession。每个接口的API方法完全相同。</p>
+<pre><code>Object getAttribute(String name)
+
+void setAttribute(String name,Object value)
+
+void removeAttribute(String name)
+
+Enumeration getAttributeNames()
+</code></pre><p>需要注意的一点是：上下文作用域不是线程安全的。<font color="blue">因为应用中可能有多个Servlet，而每一个Servlet都能访问上下文属性，而请求又是并发的，所以会出现线程安全问题。</font></p>
+<p><strong>如何做到上下文属性线程安全？</strong></p>
+<p>可以有一个思路就是：同步。</p>
+<p>在每个Servlet的doGet()方法中同步。但是这样做的一个后果就是Servlet再也不能进行并发处理了，一次只能处理一个客户。</p>
+<p>而且只能意味着Servlet中一次只能运行一个线程，同一个Servlet中的其他线程访问上下文属性，但是<strong>不能阻止另一个不同的servlet的访问</strong>。</p>
+<p>所以一个可行的办法是：对于上下文加锁。</p>
+<p>代码实例：</p>
+<pre><code>public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException,ServletException {
+    synchronized(getServletContext()) {
+         //get the attribute and do something
+    }
+}
+</code></pre><p><strong>如何做到会话属性线程安全？</strong></p>
+<p>首先应该弄清楚一个概念，会话属性是线程安全的吗？<br>答：否。</p>
+<p>因为同一个用户很有可能会在同时做出多个请求（可以想象：同一个客户可能打开一个新的浏览器窗口，容器吧来自第二个窗口的请求看作是来自同一个会话）。</p>
+<p>代码实例：</p>
+<pre><code>public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException,ServletException {
+        HttpSession session = request.getSession();
+        synchronized(session) {
+             //make use of the session and set Attributes
+        }
+}
+</code></pre><p>关于同步的忠告：因为同步要检查、获得和释放锁，所以确实会增加一些额外的开销，但是不论是哪一种形式的锁都有一条标准：<strong>一定要在最短的时间完成目标，使持有锁的时间最短。要让同步块尽可能的小。</strong></p>
+<h3 id="怎么让Servlet一次只得到一个请求？"><a href="#怎么让Servlet一次只得到一个请求？" class="headerlink" title="怎么让Servlet一次只得到一个请求？"></a>怎么让Servlet一次只得到一个请求？</h3><p>首先要了解一个接口：SingleThreadModel(STM).</p>
+<p>这个接口没有任何方法，如果一个Servlet实现了这个接口，就可以保证不会在该Servlet的服务方法中并发执行两个线程。通过同步实现对Servlet单个实例的访问，或者通过维护一个Servlet实例池并把每个新请求分配到一个空闲的Servlet，而Servlet容器可以做到这样一点。</p>
+<p>记住：只有<strong>请求属性和局部变量</strong>是线程安全的。</p>
+<h3 id="关于RequestDispatcher"><a href="#关于RequestDispatcher" class="headerlink" title="关于RequestDispatcher"></a>关于RequestDispatcher</h3><p>只有两个方法：forward()和include()</p>
+<p>1.从ServletRequest得到RequestDispatcher</p>
+<pre><code>RequestDispatcher view = request.getRequestDispatcher(&quot;result.jsp&quot;);
+//注意：上面的参数如果不是以 /开头，则是相对路径，反之，则是绝对路径。
+</code></pre><p>2.从ServletContext得到RequestDispatcher</p>
+<pre><code>RequestDispatcher view = getServletContext().getRequestDispatcher(&quot;/result.jsp&quot;);
+//注意：此处路径必须以/开头
+</code></pre><p>然后，在RequestDispatcher上调用forward()方法</p>
+<pre><code>view.forward(request,response);
+</code></pre></div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2015/07/22/Session-Cookie/" title="Session &amp;&amp; Cookie " class="prev">PREV</a><a href="/2015/07/22/Servlet-解析/" title="Servlet 解析" class="next">NEXT</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

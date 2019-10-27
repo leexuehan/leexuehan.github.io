@@ -1,0 +1,237 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.9.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> Java 内存模型（二） · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Java 内存模型（二） - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">Java 内存模型（二）</h1><div class="post-info">2015-07-22<p class="visit"><i data-identity="2015/07/22/Java-内存模型（二）/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><p>系列的上一篇是按照内存的布局来将内存模型，而这一篇是按照实际程序中对于内存的读写来讲内存模型。</p>
+<h3 id="缓存一致性"><a href="#缓存一致性" class="headerlink" title="缓存一致性"></a>缓存一致性</h3><p>影响处理器性能重要因素除了CPU的计算能力，另外一个因素就是 IO 操作。CPU 要从内存中读取数据进行计算，然后把运算结果存储到内存中。</p>
+<p>但是内存的读取速度与CPU的处理能力简直不能比，差好几个数量级，所以人们又想出了办法：缓存。用它来作为存储器和CPU的过渡。由于高速缓存的读写速度与CPU的处理速度差不多，CPU读取数据时从主存读到缓存中，然后再通过缓存读取到CPU中，写入数据也一样，需要先写入缓存中，然后再从缓存更新到主存中。这样就解决了CPU与存储器之间的矛盾。</p>
+<p>但是另一个问题出现了：<strong>缓存一致性</strong>。</p>
+<p>什么是缓存一致性问题？</p>
+<p>在多核处理器的计算机系统中，由于每一个CPU都有自己的缓存，而它们又共享一个主内存，当多个处理器的运算任务涉及到同一块主存区域内时，将可能导致各自的缓存数据不一样，那么将来同步到主内存时就出现了问题，该以哪个缓存为准呢？</p>
+<p>大神们早就设计好了相应的读写协议，协议种类繁多，此处就不多讲了。</p>
+<h3 id="Java内存模型"><a href="#Java内存模型" class="headerlink" title="Java内存模型"></a>Java内存模型</h3><p>Java内存模型的主要目标是定义程序中各个变量的访问规则，即在虚拟机中将变量存储到内存和从内存中取出变量这样的底层细节。</p>
+<p><strong>Java内存模型规定了所有变量都必须存储在主内存中。每条线程还可以有自己的工作内存。工作内存中保存了该线程使用到的变量的主内存副本拷贝，线程对于变量的所有操作都必须在工作内存中进行，不能直接读写主内存中的变量，不同线程之间也无法访问对方工作内存中的变量，线程之间变量的值的传递都是需要通过主内存来完成。</strong></p>
+<p>它们的关系如图：</p>
+<p><img src="https://cloud.githubusercontent.com/assets/12984324/8816366/98030aa4-3058-11e5-99c8-6458772b0eb0.PNG" alt="default"></p>
+<h4 id="主内存和工作内存之间的交互"><a href="#主内存和工作内存之间的交互" class="headerlink" title="主内存和工作内存之间的交互"></a>主内存和工作内存之间的交互</h4><p>Java 内存模型中定义了以下 8 种操作来完成，虚拟机实现时，必须保证下面的每一种操作都是原子的。</p>
+<blockquote>
+<p>1.lock</p>
+<p>作用于<strong>主内存变量</strong>，将该变量标识为一条线程独占的状态。</p>
+<p>2.unlock</p>
+<p>作用于<strong>主内存变量</strong>，与 1 正好相反。</p>
+<p>3.read</p>
+<p>作用于<strong>主内存的变量</strong>，从主内存中传输到线程的工作内存中，以便随后的load 操作。</p>
+<p>4.load</p>
+<p>作用于<strong>工作内存的变量</strong>，他把read操作从主内存中得到的变量值放入工作内存的变量副本中。</p>
+<p>5.use</p>
+<p>作用于<strong>工作内存的变量</strong>，它把工作内存中的一个变量的值传递到执行引擎。</p>
+<p>6.assign</p>
+<p>作用于<strong>工作内存</strong>的变量，它把一个从执行引擎接收到的值赋给工作内存的变量。</p>
+<p>7.store</p>
+<p>作用于<strong>工作内存的变量</strong>，把工作内存中一个变量的值传送到主内存中，以便随后的write使用。</p>
+<p>8.write</p>
+<p>作用于<strong>主内存变量</strong>，它把store操作从工作内存中得到的变量值放入主内存的变量中。</p>
+</blockquote>
+<h4 id="Volatile"><a href="#Volatile" class="headerlink" title="Volatile"></a>Volatile</h4><p>当一个变量定义为 volatile 之后，它将具备两种特性：</p>
+<p>1.可见性</p>
+<p>变量对所有线程的可见性，即当一条线程修改了此变量的值后其他线程可以立即得知（普通变量对于其他线程只能等到修改线程存到主存中后，从主存中读取）。</p>
+<p>需要注意的是volatile虽然有此特性，但是并不是线程安全的。看下面一段代码</p>
+<pre><code>package com.study;
+
+import java.util.concurrent.atomic.AtomicInteger;
+
+public class VolitileTest {
+    public static volatile int race = 0;
+
+    public static void increase() {
+        race++;
+    }
+
+    public static final int THREADS_COUNT = 20;
+
+    public static void main(String[] args) {
+        Thread[] threads = new Thread[THREADS_COUNT];
+        for (int i = 0; i &lt; THREADS_COUNT; i++) {
+            threads[i] = new Thread(new Runnable() {
+                public void run() {
+                    for (int i = 0; i &lt; 10000; i++) {
+                        increase();
+                    }
+                }
+            });
+            threads[i].start();
+        }
+
+        while (Thread.activeCount() &gt; 1) {
+            Thread.yield();
+        }
+        AtomicInteger a ;
+        System.out.println(race);
+    }
+}
+</code></pre><p>结果并不是：200000.</p>
+<p>每次运行这个程序虽然结果不一样，但是都会小于期望的数字。为什么呢？</p>
+<p>问题出在 increase()函数中的race++这句指令。</p>
+<p>当执行这句指令时，机器必须先将这个变量从主内存中取出来，然后加一操作，最后再写回主存中。</p>
+<p>如果一个线程取出这个变量执行加一操作时比如将race加到10001，其他线程可能已经把变量加到10005了，但是本线程在最后一步时，将数字10001同步到主内存中，于是造成了结果比正确的小。</p>
+<p>2.禁止指令重排</p>
+<p>在程序编译时，编译器在优化代码时，可能会将代码的顺序打乱，会干扰并发的正确执行。比如</p>
+<pre><code>boolean initialized = true;
+
+// Some Operations
+//假设以下代码在线程A中执行
+....
+
+intialized = false;
+
+//假设以下代码在线程B中执行
+while(initialized) {
+    ....
+}
+</code></pre><p>该程序的意思是：先初始化变量为true，在执行完一段代码后，设置为false。但是如果重排后，会导致设为false的代码先执行，于是干扰到了线程B的操作。</p>
+<p>如果在第一行代码前加一个修饰符 volatile， 则不会产生重排现象。</p>
+<p>原因是什么呢？</p>
+<p>反编译后，会发现，在有volatile修饰的变量赋值后，有一行“lock addl $ 0x0, (%esp)”操作。而这行操作的效果在于产生了一个内存屏障(Memory Barrier)，防止把该屏障之后的指令挪到此指令之前执行。</p>
+<p>这里所说的指令重排序不是任意重排，而是将不依赖的两条指令重排。</p>
+<p>比如 </p>
+<pre><code>int a = 1; int b = 2*a; int c = 2;
+</code></pre><p>第一条和第二条因为有相互依赖的关系，所以不能重排，但是第三条指令很可能在重排后就在第一条指令前面执行了。</p>
+<p>而lock addl $ 0x0, (%esp)指令把修改同步到内存时，意味着之前所有的操作都已经执行完毕，是依赖于前面的操作的，所以指令重排序无法越过内存屏障。</p>
+<p><strong>volatile变量的读操作性能与普通变量几乎没什么差别，但是写操作会慢一点，因为它需要再本地代码中插入许多内存屏障指令来保证处理器不发生乱序执行。不过即便如此，大多数场景下 volatile 的总开销仍然要比锁低。</strong></p>
+<h3 id="Java-内存模型的特征"><a href="#Java-内存模型的特征" class="headerlink" title="Java 内存模型的特征"></a>Java 内存模型的特征</h3><p><strong>原子性</strong>(Atomicity)：由 Java 内存模型来直接保证的原子性变量操作包括 read，load，assign，use，store，和write。</p>
+<p><strong>可见性</strong>（Visibility）：当一个线程修改了一个共享变量的值，其他线程能够立即得知这个修改。</p>
+<blockquote>
+<p>Java 内存模型是通过在变量修改后将新值同步回主存，在变量读取前从主存刷新变量值这种依赖主内存作为传递媒介的方式来实现可见性，无论是 volatile 变量还是普通变量都是如此。</p>
+<p>普通变量与volatile 变量的区别就是，volatile的特殊规则保证了新值能<strong>立即同步</strong>到主内存，每次使用前能<strong>立即从主内存刷新</strong>，普通变量做不到这点。</p>
+</blockquote>
+<p><strong>有序性</strong>（Ordering）：volatile 关键字本身包含了禁止指令重排序的语义。</p>
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2015/07/22/Java-线程（一）/" title="Java 线程（一）" class="prev">PREV</a><a href="/2015/07/21/找出最小的-K-个数/" title="找出最小的 K 个数" class="next">NEXT</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

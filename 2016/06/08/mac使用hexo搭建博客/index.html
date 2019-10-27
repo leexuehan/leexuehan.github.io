@@ -1,0 +1,181 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.9.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> mac使用hexo搭建博客 · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="mac使用hexo搭建博客 - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">mac使用hexo搭建博客</h1><div class="post-info">2016-06-08<p class="visit"><i data-identity="2016/06/08/mac使用hexo搭建博客/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><h2 id="环境准备"><a href="#环境准备" class="headerlink" title="环境准备"></a>环境准备</h2><h3 id="git"><a href="#git" class="headerlink" title="git"></a>git</h3><p>在github上注册账号，新建repository（过程不赘述，相关资料很多）；</p>
+<p>注意：repository的名字必须是 [username].github.io</p>
+<h3 id="node-js"><a href="#node-js" class="headerlink" title="node.js"></a>node.js</h3><p>在官网下载安装即可（过程很简单）。</p>
+<a id="more"></a>
+<h2 id="安装HEXO"><a href="#安装HEXO" class="headerlink" title="安装HEXO"></a>安装HEXO</h2><h3 id="博客根目录"><a href="#博客根目录" class="headerlink" title="博客根目录"></a>博客根目录</h3><p>建立一个目录，可以叫 MyBlogs.</p>
+<pre><code>mkdir MyBlogs
+cd MyBlogs
+</code></pre><p>这个目录就是你要发表博客的地方。</p>
+<p>然后执行下面命令，安装hexo。</p>
+<pre><code>sudo npm install -g hexo
+</code></pre><p>然后执行命令进行初始化。</p>
+<pre><code>hexo init
+</code></pre><p>如果没有什么问题的话，hexo已经安装成功。</p>
+<pre><code>hexo generate
+</code></pre><p>生成静态页面。</p>
+<p>这个时候启动本地服务，测试hexo是否安装成功。</p>
+<pre><code>hexo server
+</code></pre><p>这个时候可以看到，服务已经启动。</p>
+<p>在浏览器里面输入<a href="http://localhost:4000，测试是否出现博客页面，如果出现，说明hexo已经安装成功。" target="_blank" rel="noopener">http://localhost:4000，测试是否出现博客页面，如果出现，说明hexo已经安装成功。</a></p>
+<h2 id="关联github"><a href="#关联github" class="headerlink" title="关联github"></a>关联github</h2><p>在上一步执行hexo g生成静态页面的时候，可以看到在MyBlogs目录下，已经有了_config.yml文件。我们可以通过编辑此文件来使此目录与github进行关联。</p>
+<pre><code>vim  _config.yml
+</code></pre><p>一直到文件的结尾处有</p>
+<pre><code># Deployment
+## Docs: https://hexo.io/docs/deployment.html
+deploy:
+      type: git（需要自己写）
+      repository: https://github.com/leexuehan/leexuehan.github.io.git（必须）
+      branch: master（必须）
+</code></pre><p>需要改变的就是上面注明的地方。</p>
+<p>然后执行命令</p>
+<pre><code>npm install hexo-deployer-git --save
+</code></pre><p>对配置进行保存。</p>
+<p>然后执行命令</p>
+<pre><code>hexo deploy
+</code></pre><p>可以将设置部署到博客中。</p>
+<h2 id="访问页面"><a href="#访问页面" class="headerlink" title="访问页面"></a>访问页面</h2><pre><code>http://[username].github.io/
+</code></pre><p>如果部署成功的话，就可以看到自己的博客了。</p>
+<h2 id="可能出现的错误"><a href="#可能出现的错误" class="headerlink" title="可能出现的错误"></a>可能出现的错误</h2><p>部署之后，打开页面为404，可能是以下原因（按优先级排查）：</p>
+<h4 id="部署过程中有问题，检查yml文件后面的冒号后面是否加了空格（必须有空格）。"><a href="#部署过程中有问题，检查yml文件后面的冒号后面是否加了空格（必须有空格）。" class="headerlink" title="部署过程中有问题，检查yml文件后面的冒号后面是否加了空格（必须有空格）。"></a>部署过程中有问题，检查yml文件后面的冒号后面是否加了空格（必须有空格）。</h4><p>这个地方有一个坑，让我排查了好久。这里如果上面的yml文件设置得有问题的话，终端不会报错的。（也是被unix的没有消息就是好消息误导了半天,让自己误以为部署正确了）。</p>
+<h4 id="文件生效问题"><a href="#文件生效问题" class="headerlink" title="文件生效问题"></a>文件生效问题</h4><p>每次修改yml文件或者其他文件之后，一定要进行下面三步骤：</p>
+<pre><code>hexo clean
+hexo generate
+hexo deploy
+</code></pre><h4 id="yml文件配置问题"><a href="#yml文件配置问题" class="headerlink" title="yml文件配置问题"></a>yml文件配置问题</h4><pre><code>hexo version 
+</code></pre><p>查看版本，如果是3.0以上的话，type后面为github可能会有问题，建议改为git。</p>
+<h4 id="延时问题"><a href="#延时问题" class="headerlink" title="延时问题"></a>延时问题</h4><p>有的人说，部署之后，半小时才能访问，反正我没遇到过，我的部署之后都是秒速访问。</p>
+<p>其他错误暂时没有碰到过，欢迎补充！</p>
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2016/06/09/hexo-搭建博客-二/" title="mac 环境下 hexo 搭建博客(二)" class="prev">PREV</a><a href="/2016/06/07/dropwizard学习/" title="dropwizard学习（一)" class="next">NEXT</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

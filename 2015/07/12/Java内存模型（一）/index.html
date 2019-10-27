@@ -1,0 +1,199 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.9.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> Java内存模型（一） · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Java内存模型（一） - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">Java内存模型（一）</h1><div class="post-info">2015-07-12<p class="visit"><i data-identity="2015/07/12/Java内存模型（一）/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><h2 id="前面的废话"><a href="#前面的废话" class="headerlink" title="前面的废话"></a>前面的废话</h2><p>这几天在看周志明的《深入理解Java虚拟机》，看到了内存模型这一章，感觉到有好多有用的知识点，为了备忘，同时也为了能加深一下印象，本文就Java内存模型进行一个总结。</p>
+<h2 id="虚拟机运行数据区模型"><a href="#虚拟机运行数据区模型" class="headerlink" title="虚拟机运行数据区模型"></a>虚拟机运行数据区模型</h2><h3 id="程序计数器"><a href="#程序计数器" class="headerlink" title="程序计数器"></a>程序计数器</h3><p>Program Counter Register,存储当前线程所执行的字节码。在虚拟机的概念模型里，字节码解释器工作时就是通过改变这个计数器的值来选取下一条需要执行的字节码指令，来完成分支、循环、跳转、异常处理、线程恢复等基础都需要依赖这个计数器完成。</p>
+<p>Java虚拟机的多线程都是通过线程的轮流切换并分配处理器执行时间来实现，在任何一个确定的时刻，一个处理器（更准确的说是一个内核）只会处理一条线程中的指令。因此，<strong>为了线程切换后能恢复到正确的执行位置，每条线程都需要一个独立的程序计数器，各条线程之间计数器互不影响，独立存储。</strong></p>
+<p>如果线程正在执行的是一个Java方法，这个计数器的记录是正在执行的虚拟机字节码指令的地址；如果正在执行native方法，计数器的值为空。</p>
+<blockquote>
+<p>java native方法是指本地方法，当在方法中调用一些不是由java语言写的代码或者在方法中用 java语言<br>直接操纵计算机硬件时要声明为native方法。</p>
+</blockquote>
+<h3 id="Java-虚拟机栈"><a href="#Java-虚拟机栈" class="headerlink" title="Java 虚拟机栈"></a>Java 虚拟机栈</h3><p>虚拟机栈是线程私有的，声明周期与线程相同。虚拟机栈描述的是Java方法执行的内存模型：每个方法在执行的同时会创建一个栈帧（Stack Frame），用于存储局部变量表、操作数栈、动态链接、方法出口等信息。<strong>每一个方法从调用直至执行完成的过程就对应着一个栈帧在虚拟机栈中入栈出栈的过程。</strong></p>
+<p>局部变量表：存放了编译器可知的各种基本数据类型(boolean、byte、char、short、int、float、long、double)，对象引用和returnAddress类型。</p>
+<p>如果线程请求的栈深度大于虚拟机所允许的深度，将抛出StackOverFlowError异常；如果虚拟机栈可以动态扩展，但扩展时无法申请到足够的内存，就会抛出OutOfMemoryError异常。</p>
+<h3 id="本地方法栈"><a href="#本地方法栈" class="headerlink" title="本地方法栈"></a>本地方法栈</h3><p>与虚拟机栈作用相同，但是它为Native方法服务。</p>
+<h3 id="Java-堆"><a href="#Java-堆" class="headerlink" title="Java 堆"></a>Java 堆</h3><p><strong>是Java 虚拟机管理的内存最大的一块，被所有的线程共享的一块内存区域。在虚拟启动时创建，此内存区域的唯一目的就是存放对象实例。</strong></p>
+<p>Java 堆是垃圾收集器管理的主要区域，也被称作 GC 堆。是分代回收算法的实行场所。关于回收算法后面介绍。</p>
+<p><strong>Java 堆可以处于物理上不连续的内存空间中，只要逻辑上连续即可。</strong></p>
+<h3 id="方法区"><a href="#方法区" class="headerlink" title="方法区"></a>方法区</h3><p>各个线程的共享区域，用于存储已被虚拟机加载的<strong>类信息、常量、静态变量、即时编译器编译后的代码</strong>等数据。</p>
+<p>垃圾收集行为在这个区域较少出现，这个区域的内存回收目标主要是针对常量池的回收和类型的卸载。</p>
+<h3 id="直接内存"><a href="#直接内存" class="headerlink" title="直接内存"></a>直接内存</h3><p>在JDK1.4 中新加入了NIO类，引入了一种基于通道（Channel）与缓存区（Buffer）的I/O方式，它可以使用Native函数库直接分配堆外内存，然后通过一个存储在Java堆中的 DirectByteBuffer对象作为这块内存的引用进行操作。避免了在Java堆和Native堆中来回复制数据。</p>
+<p>下面是我自己画的一张Java 内存模型图</p>
+<p><img src="https://cloud.githubusercontent.com/assets/12984324/8637106/393773a8-28b4-11e5-9b4a-1b3e3c243d3d.PNG" alt="java"></p>
+<p>备注：图中全部灰色部分代表运行时数据区，橙色部分代表所有线程共享，而绿色部分则代表线程私有。</p>
+<hr>
+<h2 id="关于对象"><a href="#关于对象" class="headerlink" title="关于对象"></a>关于对象</h2><h3 id="对象创建"><a href="#对象创建" class="headerlink" title="对象创建"></a>对象创建</h3><p>虚拟机遇到一条new指令:</p>
+<p>1.类加载检查</p>
+<blockquote>
+<p>首先检查这个指令的参数是否能在<font color="red">常量池</font>中定位到一个符号引用，并且检查这个符号引用代表的类是否已经被加载、解析和初始化过，如果没有，必须先执行相应的<font color="red">类加载过程</font>。</p>
+</blockquote>
+<p>2.分配内存</p>
+<p>对象所需要的内存大小在加载后就可以完全确定。<strong>对象分配空间的任务等同于把一块确定大小的内存从Java堆中划分出来。</strong></p>
+<blockquote>
+<p>如果Java堆内存是绝对规整的，即所有用过的内存放在一边，空闲内存放在另一边，中间的指针作为分界点指示器，那么分配内存，只需要将指针向空闲内存一边移动与对象大小相等的距离即可。这种分配方式叫<strong>指针碰撞</strong>（Bump the Pointer）；</p>
+<p>如果Java 堆内存不规整，即使用内存和空闲内存相互交错，则<strong>虚拟机将维护一个list</strong>，记录那些内存块可以使用，在分配的时候从列表中找出一块足够大的空间划分给对象实例，并更新list。</p>
+<p>堆的规整程度与垃圾回收机制有关系。</p>
+</blockquote>
+<p>那么问题来了，如果在并发情况下对象是怎么分配的？（可能没等给对象A分配完内存，又要给B分配内存）</p>
+<p>方案一：</p>
+<p>对分配空间的动作进行同步处理。</p>
+<p>方案二：</p>
+<p>把内存分配的动作按照线程划分在不同的空间进行，即每个线程在Java堆中预先分配一小块内存，称为本地线程分配缓冲（Thread Local Allocation Buffer，TLAB）。哪个线程需要分配内存就在哪个线程的TLAB上分配，只有用完时并分配新的TLAB时，才需要同步锁定。</p>
+<p>这样看来，方案二似乎更优一点，因为同步的效率是很低的，需要上锁、解锁等操作。</p>
+<p>3.初始化</p>
+<p>内存分配完成之后，虚拟机分配到的内存空间被初始化为0，保证了实例字段在Java代码中可以不赋初值就直接使用。</p>
+<p>接下来，虚拟机要设置有关对象的各种信息，包括对象所属的类的名称，如何才能找到类的元信息，对象的哈希码，对象的GC分代年龄等。这些信息将被保存到对象头(Object Header)中。</p>
+<p>4.执行init方法，初始化字段</p>
+<p>对象按照程序员的思路初始化。</p>
+<h3 id="对象的内存布局"><a href="#对象的内存布局" class="headerlink" title="对象的内存布局"></a>对象的内存布局</h3><p>以HotSpot虚拟机为例，对象在内存中的布局分为：对象头（Header），实例数据（Instance Data），对齐填充（Padding）等三块区域。</p>
+<p><strong>对象头</strong>分为两部分：第一部分存储对象自身运行时数据如哈希码、GC分代年龄、锁状态标识等；第二部分存储类型指针，即对象指向它的类元数据指针，虚拟机通过这个指针来确定这个对象是哪个类的实例。</p>
+<p><strong>实例数据</strong>是对象真正存储的有效信息，也是在程序代码中所定义的各种类型的字段内容，包括从父类继承下来的和子类中定义的。</p>
+<p><strong>对齐填充</strong>并不是必然存在的，也没有特别的含义，仅仅起着占位符的作用。</p>
+<h3 id="对象的访问"><a href="#对象的访问" class="headerlink" title="对象的访问"></a>对象的访问</h3><p>Java程序需要通过栈上的reference数据操作堆上的对象。</p>
+<p>但是怎么样通过这个reference访问到堆上的对象呢？</p>
+<p>目前主流的访问方式有两种：使用句柄和直接指针。</p>
+<p>1.使用句柄：java堆上会划出一部分内存来作为句柄池，reference中存储的就是对象的句柄地址。</p>
+<blockquote>
+<p>句柄中包含了对象实例数据与类型数据各自的具体地址信息。人们更倾向与将句柄认为是一个对对象的”引用”。</p>
+</blockquote>
+<p>图：</p>
+<p><img src="https://cloud.githubusercontent.com/assets/12984324/8637109/5114abc6-28b4-11e5-89a9-248cff6ec27d.PNG" alt="default"></p>
+<p>2.直接指针访问：reference中直接存放的就是对象地址。</p>
+<p>图：</p>
+<p><img src="https://cloud.githubusercontent.com/assets/12984324/8637111/5a3fac46-28b4-11e5-8c0c-a626e834288f.PNG" alt="default"></p>
+<blockquote>
+<p>比较：</p>
+<p>使用句柄来访问的最大好处就是reference中存储的是稳定的句柄地址，在对象被移动时只会改变句柄的实例数据指针，而reference本身并不需要修改；<br>使用直接指针访问方式的最大好处是速度更快，节省了一次指针定位时间。</p>
+</blockquote>
+<p>以上知识点都来自于《深入理解Java虚拟机》这本书。</p>
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2015/07/12/反转单链表/" title="反转单链表" class="prev">PREV</a><a href="/2015/07/12/JVM的体系/" title="JVM的体系" class="next">NEXT</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

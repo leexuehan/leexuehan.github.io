@@ -1,0 +1,213 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.9.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> XWork 容器原理（一） · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="XWork 容器原理（一） - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">XWork 容器原理（一）</h1><div class="post-info">2015-07-27<p class="visit"><i data-identity="2015/07/27/XWork-容器原理（一）/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><p>XWork是Struts2运行机制的核心。</p>
+<p>按照官方定义：XWork是一个灵活而可靠的基于<strong>命令模式</strong>的开发框架。所谓命令模式，本质上就是请求-响应模式。</p>
+<h2 id="请求响应的实现模式"><a href="#请求响应的实现模式" class="headerlink" title="请求响应的实现模式"></a>请求响应的实现模式</h2><ul>
+<li><p>参数-返回值模式</p>
+<p>  在这里，方法在语法上天然的能够与请求-响应模式相对应：</p>
+<p>  方法签名-请求-响应模式的处理载体</p>
+<p>  方法参数-请求内容映射</p>
+<p>  方法返回值-处理结果响应</p>
+</li>
+</ul>
+<p>SpringMVC就是基于这种模式来定义和实现 Http 请求的处理与响应的。</p>
+<ul>
+<li><p>参数-参数模式</p>
+<p>  Servlet标准就是基于这种模式来进行设计的，因此这种模式也叫Servlet模式。</p>
+<p>  参数列表——Http请求被封装在一个HttpServletRequest对象，而响应被封装在HttpServletResponse对象中。</p>
+<p>  返回值——方法不存在返回值。</p>
+<p>  这种将请求和响应同时置于参数位置的模式，就是参数-参数模式。</p>
+<p>  为什么采用这种模式呢？</p>
+<p>  Servlet作为一个开发标准，它所设计的接口已经无法再将任何处理职责继续往上层推送了，因为它是Web开发最底层的标准。</p>
+</li>
+</ul>
+<ul>
+<li><p>POJO模式</p>
+<p>  在这种模式中，我们看到虽然实际进行请求的处理和响应的载体依然是POJO中的一个具体方法，但是我们并没有看到这个方法中存在任何参数。<strong>所有的请求参数，将以POJO内部属性变量的形式存在并被调用。所有的执行结果对象也同样以POJO内部属性变量的形式存在。</strong>这样一来，POJO相对应某一次的响应是一个<strong>有状态响应</strong>。因为响应处理流程、处理机制和处理结果，与当前POJO实例的内部属性的状态有关。</p>
+</li>
+</ul>
+<pre><code>    public class UserController {
+
+        private String username;
+
+        private String password;
+
+        public String login() {
+
+            return &quot;success&quot;;
+
+        }
+
+    }
+
+上面是一个普通POJO的例子。
+可以看到，POJO模式与Servlet模式有很大不同，传统的Servlet对象是一个无状态的对象，即并非一个线程安全的对象，而POJO模式从概念上突破了Servlet对象的限制，将每一个请求的处理映射到一个线程安全的响应对象中去执行。
+</code></pre><h2 id="数据流和控制流"><a href="#数据流和控制流" class="headerlink" title="数据流和控制流"></a>数据流和控制流</h2><p>数据流和控制流是两股隐藏于程序内部的神秘力量，是程序运行的核心驱动力。</p>
+<blockquote>
+<p>在整个请求-响应过程中，数据流实际上表现为数据内容，其核心包括数据请求和数据响应；而控制流实际上表现为方法进行逻辑处理的过程，包含程序的执行方向。</p>
+</blockquote>
+<h3 id="数据载体"><a href="#数据载体" class="headerlink" title="数据载体"></a>数据载体</h3><p>在MVC中的Model层，我们对于数据的关注点主要有两个：数据存储和数据传输。Model所扮演的是一个载体角色。</p>
+<p>载体必须有一定的数据结构，什么样的数据结构和数据形式最适合最为Web层的传输介质呢？</p>
+<h4 id="Map"><a href="#Map" class="headerlink" title="Map"></a>Map</h4><p>基于键值对的数据结构。Servlet标准在设计HttpServletRequest规范时就是用了类似Map结构来进行数据交互。</p>
+<p>在源码中这样定义方法：</p>
+<pre><code>public Map getParameterMap();//返回一个Map实例，以参数名称为键值，以参数实际值为Value的键值对。
+
+public String[] getParameterValues(String name);
+
+public String getParameter(String name);
+</code></pre><p>这种方式的局限性：</p>
+<p>1.Map的本质是一个容器结构，使用Map中的键值作为数据存取的依据，使得程序的可读性大大降低。</p>
+<p>Map中的数据可以在任意情况下进行增删。当这些增删的逻辑散落在程序的各个角落时，我们很难在某一个特定时刻知道当前Map中到底有哪些Key值可以进行存取。</p>
+<p>2.使用Map结构进行数据交互，无法实现必要的类型转化。</p>
+<p>从上面的源码中可以看到，根据name可以取到页面上提交上来的值，但是那些值全部都是String或者String[]类型。Map无法提供Java所具备的强类型语言的基本功能。</p>
+<h4 id="FormBean"><a href="#FormBean" class="headerlink" title="FormBean"></a>FormBean</h4><p>Struts1.X为代表的许多Web框架提出的数据交互载体的解决方案。</p>
+<p>具体实现此处略去。大致问题是：某些方法实现需要框架和容器的支持，与框架耦合性太强。</p>
+<h4 id="POJO"><a href="#POJO" class="headerlink" title="POJO"></a>POJO</h4><p>1.作为JavaBean，POJO是一个具备语义的强类型。</p>
+<p>2.POJO不依赖于任何框架，可以在程序的任何一个层次（如业务逻辑层或者持久层）复用。</p>
+<p>3.POJO突破了FormBean对于页面元素唯一对应的限制，我们可以将一个页面的元素自由映射到多个POJO中去。</p>
+<h3 id="控制流的细节"><a href="#控制流的细节" class="headerlink" title="控制流的细节"></a>控制流的细节</h3><p><strong>控制层的核心职责是处理业务逻辑。</strong></p>
+<p>所以，控制层应该更加关注其核心的职责，而其他的辅助逻辑则由框架帮忙来完成。</p>
+<h2 id="XWork"><a href="#XWork" class="headerlink" title="XWork"></a>XWork</h2><h3 id="XWork宏观视图"><a href="#XWork宏观视图" class="headerlink" title="XWork宏观视图"></a>XWork宏观视图</h3><p><img src="http://i.imgur.com/z1WKic4.png" alt></p>
+<h4 id="核心分发器"><a href="#核心分发器" class="headerlink" title="核心分发器"></a>核心分发器</h4><p>Dispatcher,本身不属于XWork的框架部分，但是它运行于Web容器中，是XWork框架的调用者和驱动执行者。</p>
+<h4 id="XWork-控制流体系"><a href="#XWork-控制流体系" class="headerlink" title="XWork 控制流体系"></a>XWork 控制流体系</h4><p>XWork进行请求响应的一系列执行元素：ActionProxy，ActionInvocation， Interceptor， Action， Result。</p>
+<h4 id="XWork-数据流体系"><a href="#XWork-数据流体系" class="headerlink" title="XWork 数据流体系"></a>XWork 数据流体系</h4><p>XWork在进行请求响应时所依赖的一个数据环境，包括两大元素：ActionContext 和 ValueStack。</p>
+<h3 id="XWork-微观视图"><a href="#XWork-微观视图" class="headerlink" title="XWork 微观视图"></a>XWork 微观视图</h3><h4 id="数据流元素"><a href="#数据流元素" class="headerlink" title="数据流元素"></a>数据流元素</h4><p><strong>ActionContext</strong>: 是一个独立的数据结构，其主要作用是XWork的执行提供数据环境。无论是请求参数还是处理的返回值，甚至一些原生的Web容器对象都封装在ActionContext内部。</p>
+<p><strong>ValueStack</strong>：本身是一个数据结构，主要作用是对ognl 计算进行扩展。</p>
+<p>XWork 构成数据流元素的两大基础性功能：数据存储和数据传输。由ActionContext负责数据存储，而ValueStack负责数据传输。</p>
+<blockquote>
+<p><strong>将数据流元素设计成为独立的数据结构，是XWork的一大亮点。</strong>传统的参数-返回值模式和参数-参数模式，无论是请求内容还是响应内容，在表现形式上都是方法的一个重要组成部分，<strong>作为控制流主要载体的方法本身对于数据流元素形成了语法依赖。</strong>造成了数据流和控制流天然耦合，参数和返回值在语法层面被紧密联系在一起。</p>
+</blockquote>
+<h4 id="控制流元素"><a href="#控制流元素" class="headerlink" title="控制流元素"></a>控制流元素</h4><p>从图中可以看到，构成控制流的元素有五个。从功能逻辑上划分可以分成两类：Interceptor/Action/Result被用于定义事件处理的基本流程，称之为<strong>事件处理节点</strong>；ActionProxy和ActionInvocation在事件处理的过程中起到作用的是对于事件处理节点进行调度执行，成为<strong>事件驱动元素</strong>。</p>
+<p>下一篇博客将详细深入地介绍这七大元素。</p>
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2015/07/27/XWork-容器原理（二）/" title="XWork 容器原理（二）" class="prev">PREV</a><a href="/2015/07/27/SpringMVC深度探险系列文章/" title="SpringMVC深度探险系列文章" class="next">NEXT</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

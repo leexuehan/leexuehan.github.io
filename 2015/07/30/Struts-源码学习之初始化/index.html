@@ -1,0 +1,378 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.9.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> Struts 源码学习之初始化 · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Struts 源码学习之初始化 - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">Struts 源码学习之初始化</h1><div class="post-info">2015-07-30<p class="visit"><i data-identity="2015/07/30/Struts-源码学习之初始化/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><h4 id="前面的话"><a href="#前面的话" class="headerlink" title="前面的话"></a>前面的话</h4><p>最近在看陆舟的《Struts2技术内幕》，写的文采斐然（技术书籍能写成这样，印象中只有侯捷了），但是怎奈水平较低，有些地方还是不太明白。于是就想按照自己的思路去看源码，一步一步跟踪调试，顺便参考书上的东西加点注释之类的，这样下来，感觉比只看书明白多了，于是就有了这篇和下篇文章。这一篇从Struts2的初始化开始讲起。</p>
+<p>用自己的话理解Struts2框架就是：接收 http 请求，然后经过服务器过滤器处理，通过 Dispatcher 从Struts.xml找到相应的Action，执行逻辑，根据结果，返回视图资源供浏览器解析。</p>
+<p>当然上面说得比较粗糙，下面的是官方的图示，可以让我们对整个流程一目了然。</p>
+<p><img src="http://i.imgur.com/hDFwrD5.png" alt></p>
+<p>在后面会从源码一步一步顺着思路开始介绍。本篇文章先从 Struts2 初始化主线开始介绍。</p>
+<p>Struts2最重要的一个过滤器：</p>
+<p><img src="http://i.imgur.com/rFiry1D.png" alt></p>
+<p>这个过滤器就是在 web.xml 配置的过滤器。</p>
+<p><img src="http://i.imgur.com/qLEkKSv.png" alt></p>
+<h2 id="Strut2-初始化主线的入口"><a href="#Strut2-初始化主线的入口" class="headerlink" title="Strut2 初始化主线的入口"></a>Strut2 初始化主线的入口</h2><p><img src="http://i.imgur.com/3fkVj3O.png" alt></p>
+<h3 id="Dispatcher"><a href="#Dispatcher" class="headerlink" title="Dispatcher"></a>Dispatcher</h3><blockquote>
+<p>Dispatcher 是 Struts2 与 XWork 的分界点，也是将MVC实现与Web容器隔离的分界点。</p>
+</blockquote>
+<p>Dispatcher 在之后的操作中占有相当重要的地位，在后面会专门提到它的作用。</p>
+<p>这里从其属性和方法两方面做一个简要的介绍。</p>
+<p><strong>属性</strong>：</p>
+<p><img src="http://i.imgur.com/sxS2zI1.png" alt></p>
+<p><strong>方法</strong>：</p>
+<p><img src="http://i.imgur.com/7aIG6iI.png" alt></p>
+<p><img src="http://i.imgur.com/xmQwtzZ.png" alt></p>
+<p>在过滤器的 init 方法中可以看到在 InitOperations 类中的 initDispatcher 分两步，一步是创建 Dispatcher，第二步就是对其进行初始化，从这里开始带动全局的初始化。</p>
+<p><img src="http://i.imgur.com/Z4fo9rm.png" alt></p>
+<p>createDispatcher() 方法如下图所示</p>
+<p><img src="http://i.imgur.com/gVpq1WQ.png" alt></p>
+<p>initDispatcher() 方法如下图所示</p>
+<p><img src="http://i.imgur.com/4oYSGO0.png" alt></p>
+<h4 id="initDispatcher-方法："><a href="#initDispatcher-方法：" class="headerlink" title="initDispatcher() 方法："></a>initDispatcher() 方法：</h4><p><strong>第一步</strong>，创建 ConfigurationManager。</p>
+<p><img src="http://i.imgur.com/iKtWttP.png" alt></p>
+<p>可以看到在ConfigurationManager 中有一个构造函数，此构造函数的参数仅仅是一个String型的变量。这个String型的变量就是配置元素中的<bean>节点中的name属性。</bean></p>
+<p>这个 ConfigurationManager 有什么用处呢？可以看缩略图中的方法，就能猜到一二：</p>
+<blockquote>
+<p>如同 ActionProxy 在整个XWork中起到的作用，它是配置元素的操作接口。它的内部封装了容器加载器和事件映射加载器。</p>
+</blockquote>
+<p>这是在 ConfigurationManager 中的 getConfiguration 的实现：</p>
+<pre><code>public synchronized Configuration getConfiguration() {
+    if (configuration == null) {
+        setConfiguration(createConfiguration(defaultFrameworkBeanName));
+        try {
+            configuration.reloadContainer(getContainerProviders());
+        } catch (ConfigurationException e) {
+            setConfiguration(null);
+            throw new ConfigurationException(&quot;Unable to load configuration.&quot;, e);
+        }
+    } else {
+        conditionalReload();
+    }
+
+    return configuration;
+}
+</code></pre><p>可以看到 Configuration 实例与 ConfigurationProvider 被封装在了 ConfigurationManager 内部。</p>
+<p><strong>第二步</strong>，初始化各种配置加载器</p>
+<p>[1]初始化 Struts2 默认的 Properties 文件，该文件是 org/apache/struts2/default 目录下的 default.properties</p>
+<p>[2]初始化 XML 文件配置加载器</p>
+<p>[3]初始化Properties文件配置加载器</p>
+<p>[5]用户自定义的配置加载器</p>
+<p>[6]初始化由 web.xml 传入的运行参数</p>
+<p>[7]初始化默认容器内置对象</p>
+<p>配置元素加载器有一个统一的接口 ConfigurationProvider</p>
+<p><img src="http://i.imgur.com/Hm5OBVZ.png" alt></p>
+<p>以 [3] 为例进行分析，其代码如下：</p>
+<pre><code>private void init_DefaultProperties() {
+    configurationManager.addContainerProvider(new DefaultPropertiesProvider());
+}
+</code></pre><p>在 ConfigurationManager 里有一个方法 addContainerProvider：</p>
+<pre><code>public void addContainerProvider(ContainerProvider provider) {
+    if (!containerProviders.contains(provider)) {
+        containerProviders.add(provider);
+        providersChanged = true;
+    }
+}
+</code></pre><blockquote>
+<p>可以看出配置加载接口的各种实现类架起了各种配置的表现形式到Java世界的桥梁。</p>
+</blockquote>
+<p>配置的加载方式起着翻译的作用，通过翻译，架构可以透明地看待所有的配置形式。</p>
+<p>ContainerProvider 是容器的一个加载接口，用于加载容器配置元素。下面是这个接口的定义：</p>
+<pre><code>public interface ContainerProvider {
+
+    /**
+     * Called before removed from the configuration manager
+     */
+    public void destroy();
+
+    /**
+     * Initializes with the configuration
+     * @param configuration The configuration
+     * @throws ConfigurationException If anything goes wrong
+     */
+    public void init(Configuration configuration) throws ConfigurationException;
+
+    /**
+     * Tells whether the ContainerProvider should reload its configuration
+     *
+     * @return &lt;tt&gt;true&lt;/tt&gt;, whether the ContainerProvider should reload its configuration, &lt;tt&gt;false&lt;/tt&gt;otherwise.
+     */
+    public boolean needsReload();
+
+    /**
+     * Registers beans and properties for the Container
+     * 
+     * @param builder The builder to register beans with
+     * @param props The properties to register constants with
+     * @throws ConfigurationException If anything goes wrong
+     */
+    public void register(ContainerBuilder builder, LocatableProperties props) throws ConfigurationException;
+
+}
+</code></pre><p>从注释中可以看到，register方法用于注册所有的beans和Properties。</p>
+<p>这里出现的 ContainerBuilder 是什么呢？</p>
+<p>下面是其结构图</p>
+<p><img src="http://i.imgur.com/1EUU7Af.png" alt></p>
+<p>可以看到主要有两类方法：一类用于搜集参数；一类用于构造对象。</p>
+<p>先创建一个 ContainerBuilder 实例，接着调用 factory 方法和 constant 方法搜集各种配置元素，最后调用 create 方法把容器创建出来。</p>
+<p>以上介绍了容器构造器，用于加载 web.xml 中的框架级别的配置元素；还有一类构造器叫事件映射构造器用于加载 struts.xml中的事件处理元素。</p>
+<p><img src="http://i.imgur.com/2tSEwnk.png" alt></p>
+<p>上图是PackageConfig的接口方法。注意到最底下有一个builder内部静态类。这个类的作用是构建此对象。</p>
+<p>先构造一个新的构造器实例，接着往构造器中设置参数，最后调用 build 方法完成对象创建。</p>
+<p>builder 内部类的架构</p>
+<p><img src="http://i.imgur.com/NCqJvNW.png" alt> </p>
+<p><strong>第三步</strong>，初始化容器</p>
+<p>就如图中所标注的那样，先创建容器对象，后对其进行依赖注入。</p>
+<p>从第一张图可以看到，容器的初始化是通过 init_PreloadConfiguration() 这个方法完成的。</p>
+<pre><code>private Container init_PreloadConfiguration() {
+    Container container = getContainer();
+
+    boolean reloadi18n = Boolean.valueOf(container.getInstance(String.class, StrutsConstants.STRUTS_I18N_RELOAD));
+    LocalizedTextUtil.setReloadBundles(reloadi18n);
+
+    boolean devMode = Boolean.valueOf(container.getInstance(String.class, StrutsConstants.STRUTS_DEVMODE));
+    LocalizedTextUtil.setDevMode(devMode);
+
+    return container;
+}
+
+public Container getContainer() {
+    if (ContainerHolder.get() != null) {
+        return ContainerHolder.get();
+    }
+    ConfigurationManager mgr = getConfigurationManager();
+    if (mgr == null) {
+        throw new IllegalStateException(&quot;The configuration manager shouldn&apos;t be null&quot;);
+    } else {
+        Configuration config = mgr.getConfiguration();
+        if (config == null) {
+            throw new IllegalStateException(&quot;Unable to load configuration&quot;);
+        } else {
+            Container container = config.getContainer();
+            ContainerHolder.store(container);
+            return container;
+        }
+    }
+}
+</code></pre><p>在一个单独的文件里，ContainerHolder是这样定义的：</p>
+<pre><code>class ContainerHolder {
+
+    private static ThreadLocal&lt;Container&gt; instance = new ThreadLocal&lt;Container&gt;();
+
+    public static void store(Container instance) {
+        ContainerHolder.instance.set(instance);
+    }
+
+    public static Container get() {
+        return ContainerHolder.instance.get();
+    }
+
+    public static void clear() {
+        ContainerHolder.instance.remove();
+    }
+
+}
+</code></pre><p>可以看到这是将Container的一个引用存放到一个ThreadLocal 引用中。</p>
+<p>另外，要注意到在 mgr.getConfiguration() 方法中有一个 reloadContainer 方法，这个方法完成容器的初始化。</p>
+<pre><code>public synchronized List&lt;PackageProvider&gt; reloadContainer(List&lt;ContainerProvider&gt; providers) throws ConfigurationException {
+        //内部缓存对象的清理工作
+        packageContexts.clear();
+        loadedFileNames.clear();
+
+        List&lt;PackageProvider&gt; packageProviders = new ArrayList&lt;PackageProvider&gt;();
+        //创建 ContainerProperties 对象，这将是初始化所有 Properties 文件中相关运行参数
+        //的主要操作对象
+        ContainerProperties props = new ContainerProperties();
+        //创建 Container 的构造器
+        ContainerBuilder builder = new ContainerBuilder();
+        //创建启动容器
+        Container bootstrap = createBootstrapContainer(providers);
+
+        for (final ContainerProvider containerProvider : providers)
+        {
+            bootstrap.inject(containerProvider);
+            //初始化 containerProvider
+            containerProvider.init(this);
+            //调用 register 方法，完成所有 Container 中的对象注册
+            containerProvider.register(builder, props);
+        }
+        props.setConstants(builder);
+
+        builder.factory(Configuration.class, new Factory&lt;Configuration&gt;() {
+            public Configuration create(Context context) throws Exception {
+                return DefaultConfiguration.this;
+            }
+        });
+
+        ActionContext oldContext = ActionContext.getContext();
+        try {
+            // Set the bootstrap container for the purposes of factory creation
+
+            setContext(bootstrap);
+            container = builder.create(false);
+            setContext(container);
+            objectFactory = container.getInstance(ObjectFactory.class);
+
+            // Process the configuration providers first
+            for (final ContainerProvider containerProvider : providers)
+            {
+                if (containerProvider instanceof PackageProvider) {
+                    container.inject(containerProvider);
+                    ((PackageProvider)containerProvider).loadPackages();
+                    packageProviders.add((PackageProvider)containerProvider);
+                }
+            }
+
+            // Then process any package providers from the plugins
+            Set&lt;String&gt; packageProviderNames = container.getInstanceNames(PackageProvider.class);
+            for (String name : packageProviderNames) {
+                PackageProvider provider = container.getInstance(PackageProvider.class, name);
+                provider.init(this);
+                provider.loadPackages();
+                packageProviders.add(provider);
+            }
+
+            rebuildRuntimeConfiguration();
+        } finally {
+            if (oldContext == null) {
+                ActionContext.setContext(null);
+            }
+        }
+        return packageProviders;
+    }
+</code></pre><p><strong>第四步</strong>，进行额外的初始化</p>
+<h4 id="PrepareOperations-结构"><a href="#PrepareOperations-结构" class="headerlink" title="PrepareOperations 结构"></a>PrepareOperations 结构</h4><p><img src="http://i.imgur.com/DkYvBhV.png" alt></p>
+<p>可以看到图中用红色框标出来的方法，其参数都是 HttpServletResponse 或者 HttpServletRequest。注意到其中有一个方法： createActionContext().</p>
+<p><img src="http://i.imgur.com/rLtsKAM.png" alt></p>
+<p>另外，注意其中的属性，我们看到有一个 dispatcher 的属性构成了对于 Dispatcher 的引用。</p>
+<h4 id="ExecuteOperations-结构"><a href="#ExecuteOperations-结构" class="headerlink" title="ExecuteOperations 结构"></a>ExecuteOperations 结构</h4><p><img src="http://i.imgur.com/fyIXFUc.png" alt></p>
+<p>至此，Struts2 的初始化主线已经完成。</p>
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2015/07/30/Struts-源码学习之运行主线/" title="Struts 源码学习之运行主线" class="prev">PREV</a><a href="/2015/07/27/XWork-容器原理（三）/" title="XWork 容器原理（三）" class="next">NEXT</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

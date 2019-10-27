@@ -1,0 +1,287 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.9.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> ThreadLocal · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="ThreadLocal - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">ThreadLocal</h1><div class="post-info">2015-07-23<p class="visit"><i data-identity="2015/07/23/ThreadLocal/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><p>访问共享的、可变的数据要求使用同步，一个可以避免同步的方式就是不共享数据。如果数据仅在单线程中被访问，就不需要任何同步。这种技术就是<strong>线程封闭（Thread confinement）</strong>。</p>
+<h2 id="栈封闭"><a href="#栈封闭" class="headerlink" title="栈封闭"></a>栈封闭</h2><p>线程封闭的一种特例，在此种限制中，只能通过本地变量才能触及对象。本地变量因为被限制在执行线程中，而其本身也存在于线程栈中，其他线程无法访问这个栈，由此实现了封闭。</p>
+<h2 id="ThreadLocal"><a href="#ThreadLocal" class="headerlink" title="ThreadLocal"></a>ThreadLocal</h2><p>这是本文的重点。</p>
+<p>是一种维护线程封闭更加规范的方式，它允许你<strong>将每个线程与持有数值的对象关联在一起</strong>。这种模式在Struts2和XWork框架中应用尤其广泛，是其核心技术。</p>
+<p>让我们来回忆一下在传统Web开发中处理请求响应的过程。</p>
+<p>最常用的方式就是用Servlet对象来进行Http请求的响应。关于Servlet的介绍请参见系列文章<a href="https://github.com/leexuehan/leexuehan.github.com/issues/40" title="系列文章" target="_blank" rel="noopener">https://github.com/leexuehan/leexuehan.github.com/issues/40</a>。通过HttpServletRequest和HttpServletResponse对象，我们能轻松地与Web容器进行交互。</p>
+<p>web收到http请求，Web容器的一个主调度线程会从事先定义好的线程池中分配一个当前的工作线程，将请求分配给当前的工作线程，由该线程来执行对应的Servlet对象中的service方法。</p>
+<p>当这个工作线程正在工作时，Web容器可能又会收到另一个Http请求，主调度线程会同样从线程池中选择另一个工作线程来服务新的请求。</p>
+<p><strong>也就是说，对于同一个Servlet的多个请求，Servlet的service方法将在一个多线程的环境下并发执行。</strong></p>
+<p><strong>Web容器默认采用单例（单一Servlet实例）多线程的方式来处理http请求。</strong></p>
+<p>如果在Servlet中定义了状态变量，则会产生线程安全的问题。</p>
+<p>比如如下代码：</p>
+<pre><code>public class ThreadUnsafe extends HttpServlet {
+    private int counter = 0;
+    public void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+        doPost(req,res);
+    }
+
+    public void doPost(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+        System.out.println(this + &quot;:&quot; + Thread.currentThread());
+        for(int i = 0; i &lt; 5; i++) {
+            System.out.println(&quot;Counter = &quot; + counter);
+            try {
+                Thread.sleep(10000);
+                counter++;
+            } catch (InterruptedException e) {
+            }
+        }
+    }
+}
+</code></pre><p>对于counter变量的改变就是线程不安全的。</p>
+<p>比较容易想到的一种解决方法是在这些方法前面加一个synchronized修饰符，但是这样一来，同步问题解决了，但是效率问题暴露了，也违背了Servlet设计的初衷。</p>
+<p>所以需要采用ThreadLocal模式来实现之。</p>
+<h3 id="ThreadLocal-模式实现原理"><a href="#ThreadLocal-模式实现原理" class="headerlink" title="ThreadLocal 模式实现原理"></a>ThreadLocal 模式实现原理</h3><p>ThreadLocal 类在维护变量时，实际使用了当前线程中的一个叫 <strong>ThreadLocalMap</strong> 的副本，每个线程都可以修改属于自己的副本而不会互相影响，从而实现了线程之间的隔离，避免了线程访问实例变量发生的冲突问题。</p>
+<p>下面是JDK中源码</p>
+<p>Thread类中的源码的一部分</p>
+<pre><code>public class Thread implements Runnable {
+     ....
+    ThreadLocal.ThreadLocalMap threadLocals = null;
+}
+</code></pre><p>Thread类里面保存着一个ThreadLocal类中的ThreadLocalMap内部类的一个引用。</p>
+<p>看一下，ThreadLocal类的源码</p>
+<pre><code>public void set(T value) {
+    Thread t = Thread.currentThread();
+    ThreadLocalMap map = getMap(t);
+    if (map != null)
+        map.set(this, value);
+    else
+        createMap(t, value);
+}
+
+public T get() {
+    Thread t = Thread.currentThread();
+    ThreadLocalMap map = getMap(t);
+    if (map != null) {
+        ThreadLocalMap.Entry e = map.getEntry(this);
+        if (e != null) {
+            @SuppressWarnings(&quot;unchecked&quot;)
+            T result = (T)e.value;
+            return result;
+        }
+    }
+    return setInitialValue();
+}
+
+ private T setInitialValue() {
+    T value = initialValue();
+    Thread t = Thread.currentThread();
+    ThreadLocalMap map = getMap(t);
+    if (map != null)
+        map.set(this, value);
+    else
+        createMap(t, value);
+    return value;
+}
+
+ThreadLocalMap getMap(Thread t) {
+    return t.threadLocals;
+}
+
+
+void createMap(Thread t, T firstValue) {
+    t.threadLocals = new ThreadLocalMap(this, firstValue);
+}
+</code></pre><p>以上只截取了部分ThreadLocal类的一部分主要代码。我们从中可以知道，它是怎么设置值和取值的。</p>
+<p>可以看到在设置值的时候，首先是通过currentThread()方法得到当前线程的一个引用，然后通过这个引用，得到一个ThreadLocalMap 对象的引用（关于ThreadLocalMap的实现，为精简起见此处先略去了。但从字面意思我们可以看出，这是一个Map对象，键值对是当前使用它的线程和它使用的对象的引用）。如果这个Map还没有创建则调用 createMap()方法来构造一个这样的map对象。</p>
+<p>在取值的时候，也是一样，如果有此对象则以当前线程为键值，取出对象即可，如果没有，则返回一个初始化的值。</p>
+<p>现在总结如下：</p>
+<p>1.ThreadLocalMap变量是属于线程的内部属性，不同的线程拥有完全不同的ThreadLocalMap变量。</p>
+<p>2.ThreadLocalMap变量的值实在ThreadLocal对象进行set或者get操作时创建的。</p>
+<p>3.在创建ThreadLocalMap变量之前，会首先检查当前线程中的ThreadLocalMap变量是否已经存在。</p>
+<p>4.使用当前线程的ThreadLocalMap变量的关键在于使用当前的ThreadLocal实例作为key进行存储。</p>
+<h3 id="比较ThreadLocal-与-synchronized-关键字"><a href="#比较ThreadLocal-与-synchronized-关键字" class="headerlink" title="比较ThreadLocal 与 synchronized 关键字"></a>比较ThreadLocal 与 synchronized 关键字</h3><p>1.ThreadLocal是一个Java类，通过对于当前线程中的局部变量操作来解决不同线程变量访问冲突的问题；</p>
+<p>2.Java中的synchronized是一个保留字，它依靠JVM的锁机制来实现临界区的函数或者变量在访问中的原子性。</p>
+<p>同步机制采用了以时间换空间的方式，提供一份变量让不同的线程排队访问；而THreadLocal采用了以空间换时间的方式为每一个线程都提供一份变量副本，从而实现同时访问互不影响。</p>
+<h3 id="一个ThreadLocal使用的例子"><a href="#一个ThreadLocal使用的例子" class="headerlink" title="一个ThreadLocal使用的例子"></a>一个ThreadLocal使用的例子</h3><pre><code>package Concurrency;
+
+public class Counter {
+    private static ThreadLocal&lt;Integer&gt; counterContext = new
+            ThreadLocal&lt;Integer&gt;() {
+        protected synchronized Integer initialValue() {
+            return 10;
+        }
+    };
+
+    public static Integer get() {
+        return counterContext.get();
+    }
+
+    public static void set(Integer value) {
+        counterContext.set(value);
+    }
+
+    public static Integer getNextCounter() {
+        counterContext.set(counterContext.get() + 1);
+        return counterContext.get();
+    }
+}
+</code></pre><p><strong>使用ThreadLocal模式最关键的地方在于创建一个任何地方都可以访问的ThreadLocal实例。</strong>在上面的代码中，用一个静态的引用实现了这一目的。</p>
+<pre><code>package Concurrency;
+
+public class ThreadLocalTest extends Thread {
+    public void run() {
+        for (int i = 0; i &lt; 3; i++) {
+            System.out.println(&quot;Thread[&quot; + Thread.currentThread().getName()
+                    + &quot;],counter = &quot; + Counter.getNextCounter());
+        }
+    }
+}
+</code></pre><p>由于getNextCounter中的逻辑所操作的是 ThreadLocal 中的变量，所以无论同时有多少个线程在运行，返回的值将仅仅与当前线程的变量值相关。也就是在同一个线程中变量的值会累加。</p>
+<pre><code>package Concurrency;
+
+public class Test {
+    public static void main(String[] args) {
+        ThreadLocalTest test1 = new ThreadLocalTest();
+        ThreadLocalTest test2 = new ThreadLocalTest();
+        ThreadLocalTest test3 = new ThreadLocalTest();
+        test1.start();
+        test2.start();
+        test3.start();
+    }
+}
+</code></pre><p>运行上面的程序，产生了如下结果：</p>
+<pre><code>Thread[Thread-2],counter = 11
+Thread[Thread-2],counter = 12
+Thread[Thread-2],counter = 13
+Thread[Thread-0],counter = 11
+Thread[Thread-0],counter = 12
+Thread[Thread-0],counter = 13
+Thread[Thread-1],counter = 11
+Thread[Thread-1],counter = 12
+Thread[Thread-1],counter = 13
+</code></pre><p>验证了上面的判断。</p>
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2015/07/23/Struts2架构之宏观解释/" title="Struts2架构之宏观解释" class="prev">PREV</a><a href="/2015/07/23/对象的发布和逸出/" title="对象的发布和逸出" class="next">NEXT</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

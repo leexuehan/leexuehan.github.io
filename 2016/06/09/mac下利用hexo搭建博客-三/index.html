@@ -1,0 +1,183 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.9.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> mac下利用hexo搭建博客(三) · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="mac下利用hexo搭建博客(三) - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">mac下利用hexo搭建博客(三)</h1><div class="post-info">2016-06-09<p class="visit"><i data-identity="2016/06/09/mac下利用hexo搭建博客-三/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><p>继续前面的工作，对博客进行功能的拓展。</p>
+<h2 id="添加标签云"><a href="#添加标签云" class="headerlink" title="添加标签云"></a>添加标签云</h2><p>在网上搜了老半天，不同主题，实现方式还是不一样的，next主题实现的方式其实很简单。</p>
+<a id="more"></a>
+<p>只需要在hexo根目录下执行下面的命令：</p>
+<pre><code>hexo new page &quot;tags&quot;
+</code></pre><p>这个时候，就可以看到跟发表文章的 _posts 同级目录已经生成了 tags 文件夹，里面已经有了一个 index.md 文件。</p>
+<p>编辑此文件，在开头增加下面两项：</p>
+<pre><code>type: &quot;tags&quot;
+comments: false
+</code></pre><p>当然，你还需要检查在主题配置文件的menu选项下面是否有 tags 选项，如下所示：</p>
+<pre><code>menu:
+      home: /
+      techs: categories/技术
+      readings: categories/读书
+      chating: categories/闲聊
+      archives: /archives
+      about: categories/关于
+      tags: /tags
+</code></pre><p>配置好后，更新配置即可。</p>
+<h2 id="添加友情链接"><a href="#添加友情链接" class="headerlink" title="添加友情链接"></a>添加友情链接</h2><p>更改主题配置文件，找到下面的地方，将social前面的#取消，然后加上链接即可。链接的形式如下：</p>
+<pre><code># Social Links
+# Key is the link label showing to end users.
+# Value is the target link (E.g. GitHub: https://github.com/iissnan)
+social:
+  #LinkLabel: Link
+      GitHub: https://github.com/leexuehan（示例，下同）
+      Weibo:  http://weibo.com/leexuehan
+      Zhihu:  https://www.zhihu.com/people/leexuehan
+      Douban: https://www.douban.com/people/leexuehan/
+</code></pre><h2 id="添加404页面"><a href="#添加404页面" class="headerlink" title="添加404页面"></a>添加404页面</h2><p>在 source 文件夹下面，创建一个名为 404.html 的文件，将下面这段代码贴进去，更新配置即可。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">&lt;!DOCTYPE html&gt;</span><br><span class="line">	&lt;html&gt;</span><br><span class="line">		&lt;head&gt;</span><br><span class="line">		&lt;/head&gt;</span><br><span class="line">		&lt;body&gt;</span><br><span class="line">			&lt;script type=&quot;text/javascript&quot; src=&quot;http://www.qq.com/404/					search_children.js&quot; charset=&quot;utf-8&quot; homePageUrl=&quot;http://					www.tianrunlin.com&quot; homePageName=&quot;回到主页&quot;&gt;&lt;/script&gt;</span><br><span class="line">		&lt;/body&gt;</span><br><span class="line">	&lt;/html&gt;</span><br></pre></td></tr></table></figure>
+<p>注意：上面的代码中的homePageUrl,是返回自己博客的链接，需要换成自己的博客地址，否则点击回到主页，就返回到别人的博客了。</p>
+<p>这段代码是腾讯做的公益，每次页面找不到的时候，就会出现一个被拐小孩的资料，也算做一件善事了。</p>
+<h2 id="设置博客的图床"><a href="#设置博客的图床" class="headerlink" title="设置博客的图床"></a>设置博客的图床</h2><p>其实，也正因为这个原因，才开始大费周章地搭建自己的博客。之前一直都用的是github的issues写博客，也挺方便的，最近突然图片很难上传到github的图库了，这让我很不爽，于是开始学着用hexo自己搭建博客。</p>
+<p>我的博客图床用的是七牛，体验了下，还是不错的，经过认证有 10G 的免费存储空间。</p>
+<p>登陆 <a href="https://portal.qiniu.com" target="_blank" rel="noopener">七牛</a>，需要进行一系列注册。话说七牛认证还是挺麻烦的，人工认证需要审核三天，支付宝认证又不敢授权，所以只好采用前者了。</p>
+<p>之后需要自己建立一个工作空间，在内容管理选项中，点击上传图片（具体步骤，网上可以很轻易搜到，这里不赘述）。</p>
+<p>如果博客中配图的话，需要先上传图片到七牛云存储中，之后选中图片复制外链地址，插入博客中即可。</p>
+<h3 id="更换网址小图标"><a href="#更换网址小图标" class="headerlink" title="更换网址小图标"></a>更换网址小图标</h3><p>这里的小图标就是打开网页后，选项卡上的小图标。</p>
+<p>搭好图床，这就很好办了，只需要将小图标下载下来。</p>
+<p>这里推荐一个logo网站：<a href="http://www.iconfont.cn" target="_blank" rel="noopener">iconfont</a>。这里面的资源非常多，可以方便地搜索到。</p>
+<p>之后需要改变主题配置文件即可。</p>
+<pre><code># Put your favicon.ico into `hexo-site/source/` directory.
+favicon: http://o8ahjnaal.bkt.clouddn.com/favicon.ico（这里就是小图标的外链地址）
+</code></pre><p>更新配置即可。</p>
+<h2 id="安装第三方插件"><a href="#安装第三方插件" class="headerlink" title="安装第三方插件"></a>安装第三方插件</h2><p>hexo安装第三方插件极为方便。<a href="https://hexo.io/plugins/" target="_blank" rel="noopener">hexo官网</a>，这里有很多插件，安装这些插件，只需要执行简单的命令： </p>
+<pre><code>npm install [插件名]
+</code></pre><p>卸载插件</p>
+<pre><code>npm uninstall [插件名]
+</code></pre></div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2016/06/09/mac-下利用hexo搭建博客（四）/" title="mac 下利用hexo搭建博客（四）" class="prev">PREV</a><a href="/2016/06/09/hexo-搭建博客-二/" title="mac 环境下 hexo 搭建博客(二)" class="next">NEXT</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>

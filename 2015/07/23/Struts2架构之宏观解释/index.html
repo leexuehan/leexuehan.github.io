@@ -1,0 +1,175 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.9.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="baidu-site-verification" content="1EB8XoOl0C"><meta name="google-site-verification" content="K7thEgdLm0UfRWJ5MGdF7sCcjClSzAlxFLPv2Oz5CGM"><title> Struts2架构之宏观解释 · 以梦为码的博客</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Struts2架构之宏观解释 - Leexuehan"><meta name="keywords"><meta name="author" content="Leexuehan"><link rel="short icon" href="/images/favicon.ico"><link rel="stylesheet" href="/css/bubuzou.css"><link rel="search" type="application/opensearchdescription+xml" href="https://leexuehan.github.io/atom.xml" title="以梦为码的博客"><script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script></head><body><header><div class="header row"> <a href="/" class="logo-link"><img src="/images/logo.png"></a><ul id="nav_list" class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" data-hover="博文" class="nav-list-link">博文</a></li><li class="nav-list-item"><a href="/archives/" target="_self" data-hover="归档" class="nav-list-link">归档</a></li><li class="nav-list-item"><a href="/categories/闲聊/" target="_self" data-hover="生活" class="nav-list-link">生活</a></li><li class="nav-list-item"><a href="/categories/技术/" target="_self" data-hover="技术" class="nav-list-link">技术</a></li><li class="nav-list-item"><a href="/about/" target="_self" data-hover="关于" class="nav-list-link">关于</a></li></ul><div class="search"><a id="search_btn" href="#search"></a></div><div id="nav_btn" class="nav-btn"><span></span><span></span><span></span></div></div></header><div class="row scroll-con"><section class="container"><!-- for archive page--><div id="postAr" class="post"><article class="post-block"><h1 class="post-title">Struts2架构之宏观解释</h1><div class="post-info">2015-07-23<p class="visit"><i data-identity="2015/07/23/Struts2架构之宏观解释/" class="article-timer"></i><span>次访问</span></p></div><div class="post-content"><p>这一篇主要从<strong>宏观角度</strong>讲了Struts2的架构和作用。</p>
+<blockquote>
+<p><strong>Struts2 在典型的三层结构的开发模式中被视作“表示层”的解决方案。因而最为核心的内容就是和Web容器打交道，帮助我们处理Http请求。</strong></p>
+</blockquote>
+<p>Struts2 通过扩展实现Servlet标准来处理 Http请求。</p>
+<p><strong>Struts2框架的作用实际上只是处理 Http 请求，并进行内部处理，再进行Http返回，而整个过程的代码级别的实现，无论如何进行封装都离不开对Servlet标准或者JSP标准所指定的底层API调用。</strong></p>
+<h2 id="struts2-的核心程序"><a href="#struts2-的核心程序" class="headerlink" title="struts2 的核心程序"></a>struts2 的核心程序</h2><p>Struts2 的核心入口程序，从功能上必须能够处理http请求，为了达到这一请求，Struts2毫无例外地遵循了 Servlet 标准，通过实现标准的 Filter 接口来进行 Http 请求处理。</p>
+<ul>
+<li>第一条主线—— Struts2的初始化：init 方法驱动执行</li>
+</ul>
+<ul>
+<li>第二条主线—— Struts2 处理 Http 请求： doFilter方法驱动执行。</li>
+</ul>
+<p>下图是Struts2入口程序执行示意图</p>
+<p><img src="http://i.imgur.com/D18mtPm.png" alt="入口"></p>
+<h3 id="Struts2初始化主线"><a href="#Struts2初始化主线" class="headerlink" title="Struts2初始化主线"></a>Struts2初始化主线</h3><p>主要做了两大内容：</p>
+<p>1.框架元素的初始化工作</p>
+<p>对框架内部许多内置对象的创建和缓存。<strong>初始化工作仅在Web应用启动时执行一次</strong>。</p>
+<p>2.控制框架运行的必要条件</p>
+<p>框架的可扩展性保证了我们可以在应用层面对框架的运行参数和执行模式进行定制化，而框架有必要对这种定制化进行正确性校验。校验失败，则启动失败。</p>
+<p><strong>Http请求主线是Struts2的核心主线。</strong>这条主线将在任何满足 web.xml 中所指定的 URL Pattern 的Http请求发生时进行响应，由doFilter方法负责驱动执行。</p>
+<h3 id="Struts2的请求处理主线"><a href="#Struts2的请求处理主线" class="headerlink" title="Struts2的请求处理主线"></a>Struts2的请求处理主线</h3><p>观察上图，可以知道，Struts2的请求处理主线分为两个阶段：</p>
+<ul>
+<li>第一阶段——Http请求预处理</li>
+</ul>
+<p>在这个阶段中，程序执行的控制权在Struts2手上，这个阶段的主要工作就是针对每一个Http请求进行预处理，为真正的业务逻辑执行做必要的数据环境和运行环境的准备。程序在这个阶段：<strong>依赖于容器，时时刻刻与容器打交道</strong>。</p>
+<blockquote>
+<p>struts2将这一段代码整合到了 struts2-core-2.2.1.jar.</p>
+</blockquote>
+<ul>
+<li>第二阶段——XWork执行业务逻辑</li>
+</ul>
+<p>在这个阶段程序执行的控制权被移交给了XWork。Struts2 在完成了Http的预处理之后，将Http请求中的数据封装成了普通的 Java 对象，并有XWork负责执行具体的业务逻辑。</p>
+<p>程序在这个阶段的特点：<strong>不依赖于容器，完全由XWork框架驱动整个执行的过程。</strong></p>
+<blockquote>
+<p>struts2将这一段代码整合到了 xwork-core-2.2.1.jar.</p>
+</blockquote>
+<p>从代码的整合上也可以看出Struts2框架的划分。</p>
+<blockquote>
+<p><strong>可以说，严格意义上的Struts2实际上是由2 个不同的框架所组成的。一个是真正意义上的Struts2，另一个是XWork。从职责上说，XWork才是真正实现MVC的XWork框架。</strong></p>
+</blockquote>
+</div></article></div><div class="right-container"><div class="widget"><div id="arAnchorBar"></div></div></div></section></div><div class="right-menu"></div><div class="modal search-modal"><div class="input-field"><input type="text" id="search_input"><label for="search-input">搜索</label></div><div id="search_result" class="search-result"></div></div><div class="blog-overlay"></div><footer class="row"><div class="footer-con"><div class="paginator"><a href="/2015/07/24/Struts2架构之微观解释/" title="Struts2架构之微观解释" class="prev">PREV</a><a href="/2015/07/23/ThreadLocal/" title="ThreadLocal" class="next">NEXT</a></div><a href="#comment" class="comment-anchor"></a><div id="vcomments"></div><script>new Valine({
+    el: "#vcomments",
+    appId: "aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz",
+    appKey: "FdzS5SOPHdhYQoEUngQ8K2QW",
+    notify: false,
+    verify: false,
+    avatar: "robohash",
+    visitor: true,
+    placeholder: "随便说点什么～.～",
+});</script><div class="copyright"><p>© 2016 - 2019 <a target="_blank">Leexuehan</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> <br> and <a href="https://github.com/Bulandent/hexo-theme-bubuzou" target="_blank">hexo-theme-bubuzou</a></p><p> <span style="padding-right: 6px;">闽ICP备16007301号-2</span></p></div><div class="totop"><i></i></div></div></footer><script async src="//cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-MML-AM_CHTML"></script><script src="/scripts/jquery-1.8.2.min.js"></script><script src="/scripts/ar-anchor.js"></script><script src="/scripts/main.js"></script><script>(function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;e=o.createElement(i);r=o.getElementsByTagName(i)[0];e.src='//www.google-analytics.com/analytics.js';r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));ga('create',"UA-65933410-1",'auto');ga('send','pageview');</script><script>const valineAPI = (() => {
+try {
+    AV.init("aD8jJBpu4oew3ovNY73z6Rdq-gzGzoHsz", "FdzS5SOPHdhYQoEUngQ8K2QW");
+} catch(error) {}
+const isExist = (identity) => {
+    identity = identity || getRealPath();
+    let query = new AV.Query('Timer');
+    return new Promise((resolve, reject) => {
+    query.equalTo("identity", identity);
+    query.find().then(results => {
+        resolve(results.length > 0);
+    }, error => reject(error));
+    })
+}
+
+const _get = (identity) => {
+    let query = null;
+    if(identity && identity instanceof Array){
+    let querys = [];
+    for(let i = 0; i < identity.length; ++i) {
+        querys[i] = new AV.Query('Timer');
+        querys[i].equalTo('identity', identity[i]);
+    }
+    query = AV.Query.or.apply(null ,querys);
+    } else {
+    identity = identity || getRealPath();
+    query = new AV.Query("Timer");
+    query.equalTo("identity", identity);
+    }
+
+    return new Promise((resolve, reject) => {
+    query.find()
+    .then(results => resolve(results))
+    .catch(error => reject(error))
+    })
+}
+
+const create = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let Todo = AV.Object.extend('Timer');
+    let todo = new Todo();
+    todo.set("times", 1);
+    todo.set("identity", identity);
+    todo.save().then(res => resolve(true), error => reject(error));
+    })
+}
+
+const update = (identity) => {
+    identity = identity || getRealPath();
+    return new Promise((resolve, reject) => {
+    let query = new AV.Query('Timer');
+    query.equalTo("identity", identity);
+    query.find().then(todos => {
+        todos.forEach(todo => {
+        todo.set("times", todo.attributes.times + 1);
+        });
+        return AV.Object.saveAll(todos);
+    }).then(todos => resolve(true), error => reject(error));
+    })
+}
+
+return {
+    isExist,
+    _get,
+    update,
+    create
+}
+})()
+
+const calcAndWriteTimes = () => {
+let isPost = true;
+
+let timerAllDOM = document.querySelectorAll(".article-timer");
+
+if(isPost) {
+    let identity = timerAllDOM[0].getAttribute("data-identity");
+    valineAPI.isExist(identity)
+    .then(exist => {
+    if(exist) {
+        return valineAPI.update(identity);
+    }
+    return new Promise(resolve => resolve(true));
+    })
+    .then( succuess => valineAPI._get(identity))
+    .then( result => timerAllDOM[0].innerText = result[0].attributes.times)
+    .catch(error => console.log(error.message))
+    return ;
+}
+
+let timerDOMCache = {};
+
+for(let timerDOM of timerAllDOM) {
+    let identity = timerDOM.getAttribute("data-identity");
+    if(timerDOMCache.hasOwnProperty(identity)){
+    timerDOMCache[identity].dom.push(timerDOM);
+    }else{
+    timerDOMCache[identity] = {
+        dom: [timerDOM],
+        times: undefined
+    };
+    }
+}
+
+let identities = Object.keys(timerDOMCache);
+valineAPI._get(identities).then(results => {
+    for(let result of results) {
+    let {identity, times} = result.attributes;
+    timerDOMCache[identity].times = times;
+    timerDOMCache[identity].dom.map(item => item.innerText = times);
+    }
+    for(let identity of identities) {
+    if(timerDOMCache[identity].times){
+        continue;
+    }
+    timerDOMCache[identity].dom.map(item => item.innerText = 1);
+    valineAPI.create(identity);
+    }
+}).catch(error => console.log(error.message))
+}
+
+if(true){
+calcAndWriteTimes();
+}</script></body></html>
